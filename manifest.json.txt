@@ -1,0 +1,9 @@
+{
+  "name": "SmartCal",
+  "short_name": "SmartCal",
+  "display": "standalone",
+  "start_url": "index.html",
+  "background_color": "#0D1B3A",
+  "theme_color": "#0080FF",
+  "icons": []
+}
