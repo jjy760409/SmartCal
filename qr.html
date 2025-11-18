@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>SmartCal QR 생성기</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+      body {
+        margin: 0;
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+          sans-serif;
+        background: radial-gradient(circle at top, #111827, #020617);
+        color: #e5e7eb;
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 24px;
+      }
+      h1 {
+        font-size: 22px;
+        margin-bottom: 8px;
+      }
+      p {
+        font-size: 13px;
+        color: #9ca3af;
+        margin-bottom: 16px;
+        text-align: center;
+      }
+      .form-row {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 16px;
+        flex-wrap: wrap;
+        justify-content: center;
+      }
+      input {
+        padding: 6px 10px;
+        border-radius: 999px;
+        border: 1px solid #374151;
+        background: #020617;
+        color: #e5e7eb;
+      }
+      button {
+        border-radius: 999px;
+        border: none;
+        padding: 6px 14px;
+        background: linear-gradient(135deg, #22c55e, #16a34a);
+        color: #f9fafb;
+        cursor: pointer;
+        font-size: 14px;
+      }
+      #qrBox {
+        margin-top: 16px;
+        padding: 16px;
+        border-radius: 16px;
+        background: rgba(15, 23, 42, 0.8);
+      }
+      #qrBox img {
+        display: block;
+        width: 220px;
+        height: 220px;
+      }
+      .qr-link {
+        font-size: 11px;
+        margin-top: 8px;
+        color: #9ca3af;
+        word-break: break-all;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>SmartCal 테이블 QR 생성기</h1>
+    <p>
+      매장 이름과 테이블 번호를 입력하면, 손님이 바로 SmartCal AI로 접속할 수 있는
+      QR을 만들어 드립니다.
+    </p>
+
+    <div class="form-row">
+      <input id="placeInput" placeholder="매장 ID (예: cafeA)" />
+      <input id="tableInput" placeholder="테이블 번호 (예: 3)" />
+      <button onclick="makeQr()">QR 만들기</button>
+    </div>
+
+    <div id="qrBox" style="display:none;">
+      <img id="qrImg" alt="SmartCal QR" />
+      <div class="qr-link" id="qrLink"></div>
+    </div>
+
+    <script>
+      function makeQr() {
+        const place = document
+          .getElementById("placeInput")
+          .value.trim()
+          .replace(/\s+/g, "") || "demo";
+        const table = document
+          .getElementById("tableInput")
+          .value.trim()
+          .replace(/\s+/g, "") || "1";
+
+        const targetUrl =
+          "https://smartcal-ai.com/?place=" +
+          encodeURIComponent(place) +
+          "&table=" +
+          encodeURIComponent(table);
+
+        const qrApi =
+          "https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=" +
+          encodeURIComponent(targetUrl);
+
+        document.getElementById("qrImg").src = qrApi;
+        document.getElementById("qrLink").textContent = targetUrl;
+        document.getElementById("qrBox").style.display = "block";
+      }
+    </script>
+  </body>
+</html>
