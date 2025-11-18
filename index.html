@@ -1,93 +1,86 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="ko">
-  <head>
-    <meta charset="utf-8" />
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SmartCal AI - 스마트 칼로리 카메라</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <link rel="stylesheet" href="./style.css" />
-  </head>
-  <body>
+    <link rel="stylesheet" href="./style.css">
+</head>
+
+<body>
     <div class="app-root">
-      <header class="app-header">
-        <div class="logo-row">
-          <div class="logo-dot"></div>
-          <div class="logo-text">SmartCal AI</div>
-        </div>
-        <div id="freeBadge" class="free-badge"></div>
-        
-</header>
+        <header class="app-header">
+            <div class="logo-row">
+                <div class="logo-dot"></div>
+                <div class="logo-text">SmartCal AI</div>
+            </div>
+            <div id="freeBadge" class="free-badge">3 / 3 · 무료 체험 · 남은 촬영 3회 (총 3회)</div>
+        </header>
 
-      </header>
+        <main class="app-main">
+            <div class="camera-card">
+                <video id="camera" playsinline autoplay></video>
+                <canvas id="captureCanvas" style="display:none;"></canvas>
 
-      <main class="app-main">
-        <div class="camera-card">
-          <video id="cameraVideo" playsinline autoplay></video>
-          <canvas id="captureCanvas" style="display:none;"></canvas>
+                <div class="camera-overlay">
+                    <div class="camera-guide-box"></div>
+                </div>
 
-          <div class="camera-overlay">
-            <div class="camera-guide-box"></div>
-          </div>
+                <button id="snapButton" class="snap-button">촬영하기</button>
+                <button id="switchCameraBtn" class="secondary-btn">카메라 전환 🔄</button>
+            </div>
 
-          <button id="snapButton" class="snap-button">촬영하기</button>
-          <button id="switchCameraBtn" class="secondary-btn">카메라 전환 🔄</button>
-          </div>
-
-        <section id="resultContainer" class="result-container"></section>
-      </main>
+            <section id="resultContainer" class="result-container">
+                <div id="resultKcal" class="result-kcal">0 kcal</div>
+                <div class="result-nutrients">
+                    탄수화물 <span id="resultCarb">0 g</span> /
+                    단백질 <span id="resultProtein">0 g</span> /
+                    지방 <span id="resultFat">0 g</span>
+                </div>
+                <p id="coachingText" class="coaching-text">📌 촬영 후 AI 코칭이 표시됩니다.</p>
+            </section>
+        </main>
     </div>
 
     <!-- 사용법 팝업 -->
     <div id="guideModal" class="modal-overlay">
-      <div class="modal-dialog">
-        <h2>SmartCal AI 사용법</h2>
-        <ol class="guide-list">
-          <li>하얀 접시/그릇 위에 음식을 담습니다.</li>
-          <li>휴대폰을 음식 위에서 화면에 가깝게 들고, 가운데 박스 안에 들어오게 맞춥니다.</li>
-          </li>아래 원형 버튼을 눌러 촬영합니다.</li>
-          <li>AI가 칼로리와 탄/단/지 비율을 계산해 보여 줍니다.</li>
-        </ol>
-        <button id="guideCloseBtn" class="primary-btn">닫기</button>
-      </div>
+        <div class="modal-dialog">
+            <h2>SmartCal AI 사용법</h2>
+            <ol class="guide-list">
+                <li>하얀 접시/그릇 위에 음식을 담습니다.</li>
+                <li>휴대폰을 음식 위에 가까이 들고 가운데 박스에 맞춥니다.</li>
+                <li>아래 버튼을 눌러 촬영합니다.</li>
+                <li>AI가 칼로리와 탄/단/지 비율을 계산해 줍니다.</li>
+            </ol>
+            <button id="guideCloseBtn" class="primary-btn">닫기</button>
+        </div>
     </div>
 
     <!-- 구독 팝업 -->
     <div id="subscribeModal" class="modal-overlay" style="display:none;">
-      <div class="modal-dialog">
-        <h2>무료 체험이 끝났어요 🥹</h2>
-        <p class="modal-desc">
-          SmartCal AI를 계속 사용하시려면 구독을 선택해 주세요.<br />
-          Pro: <b>월 4,900원</b> · Lite: <b>월 2,900원</b> · Family:
-          <b>월 8,900원</b>
-        </p>
+        <div class="modal-dialog">
+            <h2>무료 체험이 끝났어요 😢</h2>
+            <p class="modal-desc">
+                SmartCal AI를 계속 사용하시려면 구독을 선택해 주세요!<br /><br />
+                Pro: <b>월 4,900원</b> · Lite: <b>월 2,900원</b> · Family: <b>월 8,900원</b>
+            </p>
 
-        <div class="modal-plan-list">
-          <button class="plan-btn" onclick="selectPlan('lite')">
-            Lite · 2,900원/월
-          </button>
-          <button class="plan-btn primary" onclick="selectPlan('pro')">
-            Pro · 4,900원/월 (추천)
-          </button>
-          <button class="plan-btn" onclick="selectPlan('family')">
-            Family · 8,900원/월
-          </button>
+            <div class="modal-plan-list">
+                <button class="plan-btn" onclick="selectPlan('lite')">Lite · 2,900원/월</button>
+                <button class="plan-btn primary" onclick="selectPlan('pro')">Pro · 4,900원/월 (추천)</button>
+                <button class="plan-btn" onclick="selectPlan('family')">Family · 8,900원/월</button>
+            </div>
+
+            <button class="modal-close" onclick="closeSubscribeModal()">나중에 생각할게요</button>
         </div>
-
-        <button class="modal-close" onclick="closeSubscribeModal()">
-          나중에 생각할게요
-        </button>
-      </div>
     </div>
 
     <!-- 로딩 오버레이 -->
     <div id="loadingOverlay" class="loading-overlay" style="display:none;">
-      <div class="loading-spinner"></div>
-      <div class="loading-text">분석 중입니다...</div>
+        <div class="loading-spinner"></div>
+        <div class="loading-text">분석 중입니다...</div>
     </div>
 
     <script src="./app.js"></script>
-  </body>
+</body>
 </html>
-
-
-
-
