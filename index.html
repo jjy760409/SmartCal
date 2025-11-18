@@ -107,24 +107,47 @@
     </main>
   </div>
 
- <!-- SmartCal AI 사용법 튜토리얼 오버레이 -->
+ <!-- SmartCal AI 사용법 튜토리얼 오버레이 + 스크립트 한 묶음 -->
 <div id="tutorialOverlay" class="tutorial-overlay">
   <div class="tutorial-modal">
     <h2>SmartCal AI 사용법</h2>
     <ol>
       <li>하얀 접시/그릇 위에 음식을 담습니다.</li>
       <li>휴대폰을 음식 위에서 정면에 가깝게 들고, 가운데 박스 안에 들어오게 맞춥니다.</li>
-      <li>아래 촬영 버튼을 눌러 촬영합니다.</li>
+      <li>아래 원형 버튼을 눌러 촬영합니다.</li>
       <li>AI가 칼로리와 탄/단/지 비율을 계산해 보여 줍니다.</li>
     </ol>
     <button id="tutorialCloseBtn" class="primary-btn">닫기</button>
   </div>
 </div>
 
-  <canvas id="captureCanvas" hidden></canvas>
+<script>
+  // SmartCal 튜토리얼 팝업 제어 (index.html 전용)
+  (function () {
+    var overlay = document.getElementById('tutorialOverlay');
+    var btn = document.getElementById('tutorialCloseBtn');
+    if (!overlay || !btn) return;
 
-  <script src="app.js"></script>
+    // 이미 본 사용자인지 확인 (에러 나도 앱이 죽지 않게 try)
+    try {
+      if (localStorage.getItem('smartcal_seen_tutorial') === '1') {
+        overlay.style.display = 'none';
+        return;
+      }
+    } catch (e) {}
+
+    // 닫기 버튼 눌렀을 때
+    btn.addEventListener('click', function () {
+      overlay.style.display = 'none';
+      try {
+        localStorage.setItem('smartcal_seen_tutorial', '1');
+      } catch (e) {}
+    });
+  })();
+</script>
+
 </body>
 </html>
+
 
 
