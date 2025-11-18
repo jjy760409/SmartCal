@@ -181,3 +181,27 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
 });
+
+// ============================
+// 사용법 팝업(guideModal) 닫기 안전 장치
+// ============================
+window.addEventListener('load', () => {
+  const guideModal = document.getElementById('guideModal');
+  const guideCloseBtn = document.getElementById('guideCloseBtn');
+
+  // 혹시 요소가 없으면 그냥 리턴
+  if (!guideModal || !guideCloseBtn) return;
+
+  // 1) "닫기" 버튼 클릭 시 팝업 숨기기
+  guideCloseBtn.addEventListener('click', () => {
+    guideModal.style.display = 'none';
+  });
+
+  // 2) 검은 배경(바깥쪽)을 클릭해도 닫히게 하고 싶다면
+  guideModal.addEventListener('click', (event) => {
+    // 바깥(overlay) 영역만 클릭했을 때만 닫기
+    if (event.target === guideModal) {
+      guideModal.style.display = 'none';
+    }
+  });
+});
