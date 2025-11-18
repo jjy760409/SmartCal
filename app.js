@@ -1,211 +1,298 @@
-// 카메라 열기
-const video = document.getElementById("camera");
-const captureBtn = document.getElementById("captureBtn");
-const retakeBtn = document.getElementById("retakeBtn");
-const resultSection = document.getElementById("resultSection");
-const canvas = document.getElementById("captureCanvas");
+// app.js  전체 새 버전
+// - 카메라 캡처
+// - 사용법 팝업(닫기 버튼 제대로 동작)
+// - 3회 무료 사용 카운트 + 구독 유도 팝업
+// - 분석 결과 카드 UI (현재는 '가짜 데이터'로 동작, 나중에 서버 연결만 교체)
 
-const caloAvatar = document.getElementById("caloAvatar");
-const caloTitle = document.getElementById("caloTitle");
-const caloMessage = document.getElementById("caloMessage");
+const FREE_LIMIT = 3;
+const CATEGORY_ICON_MAP = {
+  meal: "🍽️",
+  rice: "🍚",
+  noodle: "🍜",
+  soup: "🥣",
+  dessert: "🍰",
+  bakery: "🥐",
+  drink: "🥤",
+  coffee: "☕",
+  fruit: "🍎",
+  snack: "🍪",
+};
 
-const resultFoodName = document.getElementById("resultFoodName");
-const resultCalorie = document.getElementById("resultCalorie");
-const carbBar = document.getElementById("carbBar");
-const sugarBar = document.getElementById("sugarBar");
-const proteinBar = document.getElementById("proteinBar");
-const fatBar = document.getElementById("fatBar");
-const carbValue = document.getElementById("carbValue");
-const sugarValue = document.getElementById("sugarValue");
-const proteinValue = document.getElementById("proteinValue");
-const fatValue = document.getElementById("fatValue");
-const caloCoachingTitle = document.getElementById("caloCoachingTitle");
-const caloCoachingMessage = document.getElementById("caloCoachingMessage");
+let videoEl, canvasEl, snapBtn;
 
-// 튜토리얼
-const tutorialModal = document.getElementById("tutorialModal");
-const openTutorialBtn = document.getElementById("openTutorialBtn");
-const closeTutorialBtn = document.getElementById("closeTutorialBtn");
+// -----------------------------
+// 초기 진입
+// -----------------------------
+document.addEventListener("DOMContentLoaded", () => {
+  videoEl = document.getElementById("cameraVideo");
+  canvasEl = document.getElementById("captureCanvas");
+  snapBtn = document.getElementById("snapButton");
 
-// 더미 음식 데이터 (모의 AI 분석용)
-const SAMPLE_FOODS = [
-  {
-    name: "사과 1개 (중간 크기)",
-    kcal: 95,
-    carb: 25,
-    sugar: 19,
-    protein: 0.5,
-    fat: 0.3,
-    coaching:
-      "자연식 간식 선택, 훌륭해요! 🍎 섬유질이 많아서 포만감을 오래 유지시켜 줄 거예요.",
-    mood: "good",
-  },
-  {
-    name: "초콜릿 케이크 1조각",
-    kcal: 340,
-    carb: 46,
-    sugar: 32,
-    protein: 4,
-    fat: 15,
-    coaching:
-      "오늘은 달콤한 보상 타임이네요 🍰 내일은 조금 더 가벼운 선택으로 균형을 맞춰 볼까요?",
-    mood: "warn",
-  },
-  {
-    name: "닭가슴살 샐러드 1접시",
-    kcal: 210,
-    carb: 10,
-    sugar: 5,
-    protein: 24,
-    fat: 8,
-    coaching:
-      "단백질과 채소 밸런스가 아주 좋아요 🥗 운동 후 식사로도 최고예요!",
-    mood: "great",
-  },
-  {
-    name: "아메리카노 1잔 (무가당)",
-    kcal: 5,
-    carb: 1,
-    sugar: 0,
-    protein: 0,
-    fat: 0,
-    coaching:
-      "칼로리 부담 거의 없는 깔끔한 선택이에요 ☕ 단, 카페인 섭취량만 주의해 주세요.",
-    mood: "neutral",
-  },
-];
+  initCamera();
+  attachEvents();
+  updateFreeBadge(getUsageInfo());
+});
 
-// 카메라 시작
-async function startCamera() {
+// -----------------------------
+// 카메라 초기화
+// -----------------------------
+async function initCamera() {
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    alert("이 브라우저에서는 카메라를 사용할 수 없습니다.");
+    return;
+  }
+
   try {
     const stream = await navigator.mediaDevices.getUserMedia({
       video: { facingMode: "environment" },
       audio: false,
     });
-    video.srcObject = stream;
-  } catch (err) {
-    console.error("카메라 사용 불가:", err);
-    caloTitle.textContent = "카메라 권한이 필요해요 📷";
-    caloMessage.textContent =
-      "브라우저 설정에서 카메라 접근을 허용한 뒤, 페이지를 새로고침해 주세요.";
+    videoEl.srcObject = stream;
+    await videoEl.play();
+  } catch (e) {
+    console.error(e);
+    alert("카메라 권한을 허용해 주세요.");
   }
 }
 
-// 사진 촬영 + 캔버스에 그리기
-function captureFrame() {
-  const vw = video.videoWidth;
-  const vh = video.videoHeight;
-  if (!vw || !vh) return null;
-
-  const size = Math.min(vw, vh);
-  const sx = (vw - size) / 2;
-  const sy = (vh - size) / 2;
-
-  canvas.width = size;
-  canvas.height = size;
-
-  const ctx = canvas.getContext("2d");
-  ctx.drawImage(video, sx, sy, size, size, 0, 0, size, size);
-
-  return canvas.toDataURL("image/jpeg", 0.6);
-}
-
-// 모의 AI 분석
-function fakeAnalyzeFood() {
-  const food = SAMPLE_FOODS[Math.floor(Math.random() * SAMPLE_FOODS.length)];
-
-  resultFoodName.textContent = food.name;
-  resultCalorie.textContent = `${food.kcal} kcal`;
-
-  const max = Math.max(food.carb, food.sugar, food.protein, food.fat, 1);
-
-  carbBar.style.width = `${(food.carb / max) * 100}%`;
-  sugarBar.style.width = `${(food.sugar / max) * 100}%`;
-  proteinBar.style.width = `${(food.protein / max) * 100}%`;
-  fatBar.style.width = `${(food.fat / max) * 100}%`;
-
-  carbValue.textContent = `${food.carb} g`;
-  sugarValue.textContent = `${food.sugar} g`;
-  proteinValue.textContent = `${food.protein} g`;
-  fatValue.textContent = `${food.fat} g`;
-
-  caloCoachingTitle.textContent = "AI 코칭";
-
-  caloCoachingMessage.textContent = food.coaching;
-
-  // Calo 표정/느낌 변경
-  switch (food.mood) {
-    case "great":
-      caloAvatar.textContent = "😄";
-      caloTitle.textContent = "완벽한 선택이에요!";
-      caloMessage.textContent = "이대로만 먹으면 몸이 정말 좋아질 거예요 ✨";
-      break;
-    case "good":
-      caloAvatar.textContent = "😊";
-      caloTitle.textContent = "건강한 선택이에요!";
-      caloMessage.textContent = "이런 간식 패턴이 쌓이면, 몸이 훨씬 가벼워져요.";
-      break;
-    case "warn":
-      caloAvatar.textContent = "🤔";
-      caloTitle.textContent = "가끔은 괜찮아요!";
-      caloMessage.textContent =
-        "대신 오늘 나머지 식사에서는 조금 더 가볍게 가볼까요?";
-      break;
-    default:
-      caloAvatar.textContent = "🤖";
-      caloTitle.textContent = "Calo가 기록 중이에요.";
-      caloMessage.textContent = "하루 전체 패턴을 보고 더 정확한 코칭을 준비할게요.";
-  }
-}
-
-captureBtn.addEventListener("click", () => {
-  const dataUrl = captureFrame();
-  if (!dataUrl) {
-    alert("카메라 준비 중입니다. 1~2초 후 다시 눌러 주세요.");
-    return;
+// -----------------------------
+// 이벤트 연결
+// -----------------------------
+function attachEvents() {
+  if (snapBtn) {
+    snapBtn.addEventListener("click", handleCapture);
   }
 
-  caloTitle.textContent = "AI가 분석 중이에요…";
-  caloMessage.textContent = "1초만 기다려 주세요. 영양정보를 계산하고 있어요 ✨";
-
-  captureBtn.disabled = true;
-  retakeBtn.hidden = false;
-
-  // 실제론 여기서 서버/YOLO API 호출
-  setTimeout(() => {
-    fakeAnalyzeFood();
-    resultSection.hidden = false;
-    captureBtn.disabled = false;
-  }, 800);
-});
-
-retakeBtn.addEventListener("click", () => {
-  resultSection.hidden = true;
-  retakeBtn.hidden = true;
-  caloAvatar.textContent = "🤖";
-  caloTitle.textContent = "다음 음식도 찍어 볼까요?";
-  caloMessage.textContent =
-    "접시에 담고 가운데 박스 안에 맞춘 뒤 다시 촬영 버튼을 눌러 주세요.";
-});
-
-openTutorialBtn.addEventListener("click", () => {
-  tutorialModal.hidden = false;
-});
-
-closeTutorialBtn.addEventListener("click", () => {
-  tutorialModal.hidden = true;
-});
-
-// PWA 서비스워커 등록
-if ("serviceWorker" in navigator) {
-  window.addEventListener("load", () => {
-    navigator.serviceWorker.register("service-worker.js").catch((err) => {
-      console.warn("서비스워커 등록 실패:", err);
+  // 사용법 팝업 닫기 버튼
+  const guideCloseBtn = document.getElementById("guideCloseBtn");
+  if (guideCloseBtn) {
+    guideCloseBtn.addEventListener("click", () => {
+      const m = document.getElementById("guideModal");
+      if (m) m.style.display = "none";
     });
-  });
+  }
+
+  // 배경(어두운 부분)을 클릭해도 닫히게 하고 싶으면 이 부분 추가
+  const guideOverlay = document.getElementById("guideModal");
+  if (guideOverlay) {
+    guideOverlay.addEventListener("click", (e) => {
+      if (e.target.id === "guideModal") {
+        guideOverlay.style.display = "none";
+      }
+    });
+  }
 }
 
-// 초기 카메라 시작
-startCamera();
+// -----------------------------
+// 캡처 → 분석
+// -----------------------------
+async function handleCapture() {
+  if (!videoEl || !canvasEl) return;
 
+  showLoading(true);
 
+  try {
+    // 비디오 프레임을 캔버스에 그리기
+    const w = videoEl.videoWidth || 640;
+    const h = videoEl.videoHeight || 480;
+    canvasEl.width = w;
+    canvasEl.height = h;
+
+    const ctx = canvasEl.getContext("2d");
+    ctx.drawImage(videoEl, 0, 0, w, h);
+
+    const dataUrl = canvasEl.toDataURL("image/jpeg", 0.8);
+
+    // ① 실제 서버 연결 버전으로 바꿀 부분
+    // const analysis = await sendImageToServer(dataUrl);
+    // ② 지금은 '가짜 분석 결과'로 동작 (테스트용)
+    const analysis = createFakeAnalysis();
+
+    renderAnalysisResult(analysis);
+
+    const usage = increaseUsage();
+    updateFreeBadge(usage);
+
+    if (usage.used > FREE_LIMIT && usage.sub === "none") {
+      openSubscribeModal();
+    }
+  } catch (e) {
+    console.error(e);
+    alert("분석 중 오류가 발생했습니다. 다시 시도해 주세요.");
+  } finally {
+    showLoading(false);
+  }
+}
+
+// -----------------------------
+// (나중용) 실제 서버 호출 형태 예시
+// -----------------------------
+async function sendImageToServer(dataUrl) {
+  const deviceId = getOrCreateDeviceId();
+
+  const payload = {
+    image: dataUrl,
+    device_id: deviceId,
+    app_version: "1.0.0",
+    locale: "ko-KR",
+  };
+
+  const res = await fetch("https://api.smartcal-ai.com/v1/analyze", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+
+  if (!res.ok) throw new Error("서버 오류: " + res.status);
+  return await res.json();
+}
+
+function getOrCreateDeviceId() {
+  const key = "smartcal_device_id";
+  let id = localStorage.getItem(key);
+  if (!id) {
+    id = "web-" + (crypto.randomUUID ? crypto.randomUUID() : Date.now());
+    localStorage.setItem(key, id);
+  }
+  return id;
+}
+
+// -----------------------------
+// (지금은 가짜 분석 데이터) - 나중에 제거 가능
+// -----------------------------
+function createFakeAnalysis() {
+  // 간단히 사과 1개 예시
+  return {
+    detected_items: [
+      {
+        id: "item-1",
+        label: "apple",
+        display_name_ko: "사과 1개",
+        category: "fruit",
+        confidence: 0.95,
+        serving_size: { unit: "g", value: 120 },
+        calories: 95,
+        macros: { carbs_g: 25, protein_g: 0.5, fat_g: 0.3 },
+      },
+    ],
+    total: {
+      calories: 95,
+      macros: { carbs_g: 25, protein_g: 0.5, fat_g: 0.3 },
+    },
+  };
+}
+
+// -----------------------------
+// 결과 화면 렌더링
+// -----------------------------
+function renderAnalysisResult(analysis) {
+  const container = document.getElementById("resultContainer");
+  if (!container) return;
+  container.innerHTML = "";
+
+  const total = analysis.total;
+  const header = document.createElement("div");
+  header.className = "result-summary";
+  header.innerHTML = `
+    <div class="result-main-kcal">${total.calories} kcal</div>
+    <div class="result-macros">
+      탄 ${total.macros.carbs_g}g · 단 ${total.macros.protein_g}g · 지 ${
+    total.macros.fat_g
+  }g
+    </div>
+  `;
+  container.appendChild(header);
+
+  const list = document.createElement("div");
+  list.className = "result-items";
+
+  (analysis.detected_items || []).forEach((item) => {
+    const icon = CATEGORY_ICON_MAP[item.category] || "🍽️";
+    const card = document.createElement("div");
+    card.className = "result-item-card";
+    card.innerHTML = `
+      <div class="result-item-left">
+        <div class="result-item-icon">${icon}</div>
+        <div>
+          <div class="result-item-name">${item.display_name_ko}</div>
+          <div class="result-item-gram">${item.serving_size.value}${
+      item.serving_size.unit
+    }</div>
+        </div>
+      </div>
+      <div class="result-item-right">
+        <div class="result-item-kcal">${item.calories} kcal</div>
+        <div class="result-item-macros">
+          탄 ${item.macros.carbs_g}g · 단 ${item.macros.protein_g}g · 지 ${
+      item.macros.fat_g
+    }g
+        </div>
+      </div>
+    `;
+    list.appendChild(card);
+  });
+
+  container.appendChild(list);
+}
+
+// -----------------------------
+// 3회 무료 카운트 + 구독 상태
+// -----------------------------
+function getUsageInfo() {
+  const used = parseInt(
+    localStorage.getItem("smartcal_free_scans_used") || "0",
+    10
+  );
+  const sub =
+    localStorage.getItem("smartcal_subscription_status") || "none";
+  return { used, sub };
+}
+
+function increaseUsage() {
+  const info = getUsageInfo();
+  const next = info.used + 1;
+  localStorage.setItem("smartcal_free_scans_used", String(next));
+  return { ...info, used: next };
+}
+
+function updateFreeBadge(info) {
+  const badge = document.getElementById("freeBadge");
+  if (!badge) return;
+
+  const remain = Math.max(0, FREE_LIMIT - info.used);
+  const text =
+    info.sub !== "none"
+      ? "SmartCal Pro 구독 활성화"
+      : `무료 체험 · 남은 촬영 ${remain}회 (총 ${FREE_LIMIT}회)`;
+
+  badge.innerHTML = `<span class="used">${info.used}</span> / ${FREE_LIMIT} · ${text}`;
+}
+
+// -----------------------------
+// 구독 팝업
+// -----------------------------
+function openSubscribeModal() {
+  const el = document.getElementById("subscribeModal");
+  if (el) el.style.display = "flex";
+}
+
+function closeSubscribeModal() {
+  const el = document.getElementById("subscribeModal");
+  if (el) el.style.display = "none";
+}
+
+function selectPlan(plan) {
+  localStorage.setItem("smartcal_subscription_status", plan);
+  closeSubscribeModal();
+  updateFreeBadge(getUsageInfo());
+  alert("테스트용: " + plan + " 플랜을 선택했습니다.");
+}
+
+// -----------------------------
+// 로딩 표시
+// -----------------------------
+function showLoading(show) {
+  const el = document.getElementById("loadingOverlay");
+  if (!el) return;
+  el.style.display = show ? "flex" : "none";
+}
