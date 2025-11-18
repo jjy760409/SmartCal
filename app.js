@@ -1,292 +1,234 @@
-/* 기본 설정 */
-* {
-  box-sizing: border-box;
-}
+// SmartCal AI - Camera & Calorie Demo
+// ⚠️ 이 파일 전체를 기존 app.js에 그대로 덮어쓰세요!
 
-body {
-  margin: 0;
-  padding: 0;
-  background: #020617;
-  color: #e5e7eb;
-  font-family: -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
-}
+const MAX_FREE_USES = 3;
 
-.app-root {
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
+let captureCount = 0;
+let currentStream = null;
+let currentFacingMode = "environment"; // 후면 카메라 우선
 
-/* 헤더 */
-.app-header {
-  width: 100%;
-  max-width: 640px;
-  padding: 16px 20px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
+// === DOM 요소 가져오기 ===
+const video = document.getElementById("video");
+const canvas = document.getElementById("canvas");
+const guideOverlay = document.getElementById("guideOverlay");
 
-.logo-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
+const captureBtn = document.getElementById("captureBtn");
+const switchCameraBtn = document.getElementById("switchCameraBtn");
+const resetGuideBtn = document.getElementById("resetGuideBtn");
 
-.logo-dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 999px;
-  background: #22c55e;
-  box-shadow: 0 0 10px rgba(34, 197, 94, 0.8);
-}
+const usageText = document.getElementById("usageText");
+const usageBadge = document.getElementById("usageBadge");
+const message = document.getElementById("message");
 
-.logo-text {
-  font-weight: 700;
-  font-size: 18px;
-  color: #f9fafb;
-}
+const resultSection = document.getElementById("resultSection");
+const foodNameEl = document.getElementById("foodName");
+const calorieValueEl = document.getElementById("calorieValue");
+const resultNoteEl = document.getElementById("resultNote");
 
-.free-badge {
-  margin-top: 4px;
-  display: inline-flex;
-  align-items: center;
-  padding: 4px 10px;
-  border-radius: 999px;
-  background: #022c22;
-  color: #a7f3d0;
-  font-size: 13px;
-}
+const subscriptionModal = document.getElementById("subscriptionModal");
+const closeModalBtn = document.getElementById("closeModalBtn");
+const subscribeBtn = document.getElementById("subscribeBtn");
+const laterBtn = document.getElementById("laterBtn");
 
-/* 메인 영역 */
-.app-main {
-  width: 100%;
-  max-width: 640px;
-  padding: 0 16px 24px;
-}
+// === 카메라 시작 ===
+async function startCamera() {
+  try {
+    // 기존 스트림이 있으면 정리
+    if (currentStream) {
+      currentStream.getTracks().forEach((t) => t.stop());
+    }
 
-/* 카메라 카드 */
-.camera-card {
-  position: relative;
-  border-radius: 24px;
-  overflow: hidden;
-  background: #020617;
-  border: 1px solid #0f172a;
-}
+    const constraints = {
+      video: {
+        facingMode: currentFacingMode
+      },
+      audio: false
+    };
 
-#camera {
-  width: 100%;
-  height: auto;
-  display: block;
-}
+    const stream = await navigator.mediaDevices.getUserMedia(constraints);
+    currentStream = stream;
+    video.srcObject = stream;
+    await video.play();
 
-/* 가운데 가이드 박스 */
-.camera-overlay {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  pointer-events: none;
-}
-
-.camera-guide-box {
-  width: 70%;
-  max-width: 360px;
-  aspect-ratio: 1 / 1;
-  border-radius: 24px;
-  border: 3px solid rgba(248, 250, 252, 0.9);
-  box-shadow: 0 0 40px rgba(15, 23, 42, 0.9);
-}
-
-/* 촬영 버튼 */
-.snap-button {
-  position: absolute;
-  left: 50%;
-  bottom: 18px;
-  transform: translateX(-50%);
-  padding: 14px 32px;
-  border-radius: 999px;
-  border: none;
-  background: #22c55e;
-  color: #052e16;
-  font-weight: 700;
-  font-size: 16px;
-  cursor: pointer;
-  box-shadow: 0 10px 30px rgba(34, 197, 94, 0.6);
-}
-
-/* 카메라 전환 버튼 */
-.secondary-btn {
-  position: absolute;
-  left: 16px;
-  bottom: 16px;
-  padding: 6px 12px;
-  border-radius: 999px;
-  border: none;
-  background: rgba(15, 23, 42, 0.8);
-  color: #e5e7eb;
-  font-size: 12px;
-  cursor: pointer;
-}
-
-/* 결과 영역 */
-.result-container {
-  margin-top: 16px;
-  padding: 16px 18px 18px;
-  border-radius: 18px;
-  background: #020617;
-  border: 1px solid #0f172a;
-}
-
-.result-kcal {
-  font-size: 24px;
-  font-weight: 700;
-  color: #facc15;
-}
-
-.result-nutrients {
-  margin-top: 6px;
-  font-size: 14px;
-  color: #9ca3af;
-}
-
-.coaching-text {
-  margin-top: 10px;
-  font-size: 14px;
-  color: #d1fae5;
-}
-
-/* 공통 모달 오버레이 */
-.modal-overlay {
-  position: fixed;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(15, 23, 42, 0.7);
-  z-index: 1000;
-  /* 여기 중요! 오버레이가 클릭을 받도록 */
-  pointer-events: auto;
-}
-
-/* 모달 대화상자 */
-.modal-dialog {
-  width: calc(100% - 40px);
-  max-width: 360px;
-  background: #020617;
-  border-radius: 18px;
-  padding: 20px 22px 18px;
-  box-shadow: 0 24px 80px rgba(15, 23, 42, 0.9);
-  border: 1px solid #1e293b;
-}
-
-.modal-dialog h2 {
-  margin: 0 0 12px;
-  font-size: 18px;
-  color: #f9fafb;
-}
-
-.guide-list {
-  margin: 0 0 18px 18px;
-  padding: 0;
-  color: #e5e7eb;
-  font-size: 14px;
-}
-
-.guide-list li {
-  margin-bottom: 4px;
-}
-
-/* 버튼 스타일 */
-.primary-btn,
-.plan-btn,
-.modal-close {
-  border-radius: 999px;
-  border: none;
-  padding: 10px 16px;
-  font-size: 14px;
-  cursor: pointer;
-}
-
-.primary-btn {
-  width: 100%;
-  background: #22c55e;
-  color: #052e16;
-  font-weight: 700;
-}
-
-/* 구독 모달 */
-.modal-desc {
-  font-size: 14px;
-  color: #e5e7eb;
-  margin-bottom: 14px;
-}
-
-.modal-plan-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin-bottom: 12px;
-}
-
-.plan-btn {
-  width: 100%;
-  background: #0f172a;
-  color: #e5e7eb;
-}
-
-.plan-btn.primary {
-  background: #22c55e;
-  color: #052e16;
-  font-weight: 700;
-}
-
-.modal-close {
-  width: 100%;
-  background: transparent;
-  color: #9ca3af;
-}
-
-/* 로딩 오버레이 */
-.loading-overlay {
-  position: fixed;
-  inset: 0;
-  display: none;
-  align-items: center;
-  justify-content: center;
-  flex-direction: column;
-  background: rgba(15, 23, 42, 0.7);
-  z-index: 1100;
-}
-
-.loading-spinner {
-  width: 40px;
-  height: 40px;
-  border-radius: 999px;
-  border: 4px solid rgba(148, 163, 184, 0.5);
-  border-top-color: #22c55e;
-  animation: spin 1s linear infinite;
-  margin-bottom: 10px;
-}
-
-.loading-text {
-  font-size: 14px;
-  color: #e5e7eb;
-}
-
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
+    setMessage("찍고 싶은 음식이 화면 중앙에 오도록 맞춰주세요. 📸", "info");
+  } catch (err) {
+    console.error(err);
+    setMessage("카메라 접근 권한을 허용해 주세요. (브라우저 설정 확인)", "error");
   }
 }
 
-/* 모바일 최적화 */
-@media (max-width: 480px) {
-  .camera-card {
-    border-radius: 0;
-    border-left: none;
-    border-right: none;
+// === 메시지 표시 ===
+function setMessage(text, type = "info") {
+  message.textContent = text || "";
+  if (!text) return;
+
+  if (type === "error") {
+    message.style.color = "#fb7185"; // 빨강
+  } else if (type === "warn") {
+    message.style.color = "#facc15"; // 노랑
+  } else {
+    message.style.color = "#f97316"; // 주황 (기본)
   }
 }
+
+// === 사용 횟수 UI 갱신 ===
+function updateUsageUI() {
+  usageText.textContent = `무료 사용: ${captureCount} / ${MAX_FREE_USES}회`;
+
+  if (captureCount >= MAX_FREE_USES) {
+    usageBadge.textContent = "LIMIT REACHED";
+    usageBadge.classList.add("limit");
+    captureBtn.disabled = true;
+  } else {
+    usageBadge.textContent = "FREE MODE";
+    usageBadge.classList.remove("limit");
+    captureBtn.disabled = false;
+  }
+}
+
+// === 구독 모달 열기/닫기 ===
+function openSubscriptionModal() {
+  subscriptionModal.classList.add("active");
+}
+
+function closeSubscriptionModal() {
+  subscriptionModal.classList.remove("active");
+}
+
+// === 간단한 데모용 음식 & 칼로리 예시 ===
+const demoFoods = [
+  { name: "김밥(1줄)", kcal: 320, note: "일반적인 김밥 1줄 기준 대략적인 칼로리입니다." },
+  { name: "치킨(한 조각)", kcal: 250, note: "조리 방법에 따라 실제 칼로리는 달라질 수 있어요." },
+  { name: "햄버거(1개)", kcal: 450, note: "소스와 사이즈에 따라 차이가 큽니다." },
+  { name: "샐러드(1그릇)", kcal: 110, note: "드레싱을 많이 넣으면 칼로리가 올라갑니다." },
+  { name: "라면(1봉지)", kcal: 500, note: "국물을 덜 마시면 칼로리를 조금 줄일 수 있어요." },
+  { name: "초콜릿(1조각)", kcal: 60, note: "당분 섭취를 조절하면서 드시는 걸 추천합니다." }
+];
+
+function getRandomFoodResult() {
+  const item = demoFoods[Math.floor(Math.random() * demoFoods.length)];
+  return item;
+}
+
+// === 촬영 & 분석 ===
+function captureAndAnalyze() {
+  // 1) 무료 횟수 초과 확인
+  if (captureCount >= MAX_FREE_USES) {
+    updateUsageUI();
+    openSubscriptionModal();
+    setMessage("무료 체험 3회가 모두 사용되었습니다. 😊", "warn");
+    return;
+  }
+
+  // 2) 비디오 준비 여부 확인
+  if (!video || video.readyState < 2) {
+    setMessage("카메라가 아직 준비되지 않았어요. 잠시 후 다시 시도해 주세요.", "warn");
+    return;
+  }
+
+  try {
+    const width = video.videoWidth;
+    const height = video.videoHeight;
+
+    if (!width || !height) {
+      setMessage("카메라 화면 정보를 가져오지 못했어요. 다시 시도해 주세요.", "error");
+      return;
+    }
+
+    // 캔버스에 현재 프레임 그리기
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext("2d");
+    ctx.drawImage(video, 0, 0, width, height);
+
+    // 실제 버전에서는 여기서 YOLO 등 AI 분석을 호출하면 됩니다.
+    // 지금은 데모용으로 랜덤 음식 결과를 반환.
+    const result = getRandomFoodResult();
+
+    // 🔥 실제 촬영 1회 완료 → 여기에서만 사용 횟수 증가
+    captureCount += 1;
+    updateUsageUI();
+
+    // 안내 오버레이 숨기기
+    hideGuideOverlay();
+
+    // 결과 표시
+    showResult(result);
+
+    // 사용 횟수 소진되었으면 모달 띄우기
+    if (captureCount >= MAX_FREE_USES) {
+      openSubscriptionModal();
+      setMessage("무료 3회 체험이 끝났어요. 구독 안내를 확인해 주세요. 🙌", "warn");
+    } else {
+      setMessage("분석이 완료되었습니다! 결과를 확인해 보세요. ✅", "info");
+    }
+  } catch (err) {
+    console.error(err);
+    setMessage("이미지 분석 중 오류가 발생했어요. 다시 시도해 주세요.", "error");
+  }
+}
+
+// === 결과 카드 표시 ===
+function showResult(result) {
+  foodNameEl.textContent = result.name;
+  calorieValueEl.textContent = result.kcal;
+  resultNoteEl.textContent = result.note || "촬영한 이미지를 기반으로 대략적인 칼로리를 추정합니다.";
+  resultSection.style.display = "block";
+}
+
+// === 안내 오버레이 제어 ===
+function hideGuideOverlay() {
+  guideOverlay.classList.add("hidden");
+}
+
+function showGuideOverlay() {
+  guideOverlay.classList.remove("hidden");
+  setMessage("화면 중앙에 음식이 잘 보이도록 맞춰주세요. 📷", "info");
+}
+
+// === 카메라 전환 ===
+function toggleCamera() {
+  currentFacingMode = currentFacingMode === "environment" ? "user" : "environment";
+  startCamera();
+}
+
+// === 이벤트 리스너 등록 ===
+document.addEventListener("DOMContentLoaded", () => {
+  // 초기 UI 설정
+  updateUsageUI();
+  showGuideOverlay();
+  startCamera();
+
+  captureBtn.addEventListener("click", captureAndAnalyze);
+  switchCameraBtn.addEventListener("click", toggleCamera);
+  resetGuideBtn.addEventListener("click", showGuideOverlay);
+
+  // 모달 버튼들
+  if (closeModalBtn) {
+    closeModalBtn.addEventListener("click", () => {
+      closeSubscriptionModal();
+    });
+  }
+
+  if (laterBtn) {
+    laterBtn.addEventListener("click", () => {
+      closeSubscriptionModal();
+      setMessage("언제든지 다시 촬영하시면 구독 안내를 볼 수 있어요. 😊", "info");
+    });
+  }
+
+  if (subscribeBtn) {
+    subscribeBtn.addEventListener("click", () => {
+      // 실제 버전: 결제/구독 화면으로 이동
+      setMessage("현재는 데모 버전입니다. 정식 구독 기능은 곧 연결될 예정입니다. 🚀", "info");
+      closeSubscriptionModal();
+    });
+  }
+
+  // 모달 바깥 눌렀을 때 닫기 (백그라운드 클릭)
+  subscriptionModal.addEventListener("click", (e) => {
+    if (e.target === subscriptionModal) {
+      closeSubscriptionModal();
+    }
+  });
+});
