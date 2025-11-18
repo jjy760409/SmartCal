@@ -1,29 +1,3 @@
-// ===================== SmartCal 튜토리얼 팝업 제어 =====================
-(function () {
-  // index.html 에서 만든 요소들 가져오기
-  const overlay = document.getElementById('tutorialOverlay');
-  const closeBtn = document.getElementById('tutorialCloseBtn');
-
-  // 페이지 구조가 아직 준비 안됐으면 그냥 종료
-  if (!overlay || !closeBtn) return;
-
-  // 이미 본 사람인지 확인 (localStorage 사용)
-  const seen = localStorage.getItem('smartcal_seen_tutorial');
-
-  // 이미 1번 본 사용자는 다시 안 보여줌
-  if (seen === '1') {
-    overlay.classList.add('hidden');
-  }
-
-  // "닫기" 버튼 클릭 시 실행
-  closeBtn.addEventListener('click', function () {
-    // 화면에서 팝업 숨기기
-    overlay.classList.add('hidden');
-    // 다시 안 보이도록 표시 저장
-    localStorage.setItem('smartcal_seen_tutorial', '1');
-  });
-})();
-
 // 카메라 열기
 const video = document.getElementById("camera");
 const captureBtn = document.getElementById("captureBtn");
@@ -233,4 +207,5 @@ if ("serviceWorker" in navigator) {
 
 // 초기 카메라 시작
 startCamera();
+
 
