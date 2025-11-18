@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <title>SmartCal AI - Health Starts with a Snap</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+
+  <!-- PWA -->
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#050816" />
+
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div id="app">
+    <!-- 상단 헤더 -->
+    <header class="sc-header">
+      <div class="sc-logo">
+        <div class="logo-mark">📸</div>
+        <div class="logo-text">
+          <span class="logo-title">SmartCal AI</span>
+          <span class="logo-sub">Health starts with a snap</span>
+        </div>
+      </div>
+
+      <button id="openTutorialBtn" class="ghost-btn">튜토리얼</button>
+    </header>
+
+    <!-- 카메라 화면 -->
+    <main class="sc-main">
+      <!-- Calo 영역 -->
+      <section class="calo-panel">
+        <div class="calo-avatar" id="caloAvatar">🤖</div>
+        <div class="calo-text">
+          <p id="caloTitle">안녕하세요, 저는 Calo예요!</p>
+          <p id="caloMessage">접시에 음식을 담고, 가운데 박스 안에 보이도록 맞춘 뒤 버튼을 눌러 주세요.</p>
+        </div>
+      </section>
+
+      <!-- 카메라 + 촬영 버튼 -->
+      <section class="camera-section">
+        <div class="camera-frame">
+          <video id="camera" autoplay playsinline></video>
+          <div class="camera-overlay">
+            <div class="guide-box"></div>
+            <div class="guide-text">음식/과일/디저트를 가운데에 맞춰 주세요</div>
+          </div>
+        </div>
+
+        <div class="camera-controls">
+          <button id="retakeBtn" class="secondary-btn" hidden>다시 찍기</button>
+          <button id="captureBtn" class="shot-btn">
+            <span class="shot-inner"></span>
+          </button>
+          <button id="historyBtn" class="ghost-btn" disabled>기록(준비 중)</button>
+        </div>
+      </section>
+
+      <!-- 결과 섹션 -->
+      <section class="result-section" id="resultSection" hidden>
+        <div class="result-header">
+          <span class="result-label">AI 분석 결과</span>
+          <span id="resultFoodName" class="result-food">사과 1개</span>
+          <span id="resultCalorie" class="result-kcal">95 kcal</span>
+        </div>
+
+        <div class="nutri-grid">
+          <div class="nutri-item">
+            <span class="nutri-name">탄수화물</span>
+            <div class="nutri-bar-wrap">
+              <div class="nutri-bar carb" id="carbBar"></div>
+            </div>
+            <span id="carbValue" class="nutri-value">25 g</span>
+          </div>
+          <div class="nutri-item">
+            <span class="nutri-name">당류</span>
+            <div class="nutri-bar-wrap">
+              <div class="nutri-bar sugar" id="sugarBar"></div>
+            </div>
+            <span id="sugarValue" class="nutri-value">19 g</span>
+          </div>
+          <div class="nutri-item">
+            <span class="nutri-name">단백질</span>
+            <div class="nutri-bar-wrap">
+              <div class="nutri-bar protein" id="proteinBar"></div>
+            </div>
+            <span id="proteinValue" class="nutri-value">0.5 g</span>
+          </div>
+          <div class="nutri-item">
+            <span class="nutri-name">지방</span>
+            <div class="nutri-bar-wrap">
+              <div class="nutri-bar fat" id="fatBar"></div>
+            </div>
+            <span id="fatValue" class="nutri-value">0.3 g</span>
+          </div>
+        </div>
+
+        <div class="calo-coaching">
+          <p id="caloCoachingTitle">AI 코칭</p>
+          <p id="caloCoachingMessage">오늘 선택, 아주 좋아요! 🍎 자연식 위주라서 몸이 편안해질 거예요.</p>
+        </div>
+
+        <button id="openBalanceBtn" class="primary-btn">
+          오늘 영양 밸런스 확인하기
+        </button>
+      </section>
+    </main>
+  </div>
+
+  <!-- 튜토리얼 모달 -->
+  <div id="tutorialModal" class="modal" hidden>
+    <div class="modal-backdrop"></div>
+    <div class="modal-content">
+      <h2>SmartCal AI 사용법</h2>
+      <ol>
+        <li>하얀 접시/그릇 위에 음식을 담습니다.</li>
+        <li>휴대폰을 음식 위에서 정면에 가깝게 들고, 가운데 박스 안에 들어오게 맞춥니다.</li>
+        <li>아래 원형 버튼을 눌러 촬영합니다.</li>
+        <li>AI가 칼로리와 탄/단/지 비율을 계산해 보여 줍니다.</li>
+      </ol>
+      <div class="modal-actions">
+        <button id="closeTutorialBtn" class="secondary-btn">닫기</button>
+      </div>
+    </div>
+  </div>
+
+  <canvas id="captureCanvas" hidden></canvas>
+
+  <script src="app.js"></script>
+</body>
+</html>
