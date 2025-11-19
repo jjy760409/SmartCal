@@ -1,6 +1,6 @@
-// SmartCal AI - Netlify Functions 연동 버전
+// SmartCal AI - Netlify Functions 연동 버전 (버튼 ID 자동 인식 버전)
 // - 3회 무료 제한 + 구독 모달
-// - /api/analyze 로 이미지(JSON) 전송 (base64)
+// - /api/analyze 로 이미지(JSON, base64) 전송
 // - 오늘 섭취 기록 + 총 칼로리
 // - PWA 서비스워커 등록
 
@@ -14,36 +14,101 @@ let currentFacingMode = "environment";
 let todayHistoryKey = "";
 let history = [];
 
-// DOM
+// ===== DOM 요소 가져오기 (ID 여러 개 대비) =====
 const video = document.getElementById("video");
 const canvas = document.getElementById("canvas");
 const guideOverlay = document.getElementById("guideOverlay");
 
-const captureBtn = document.getElementById("captureBtn");
-const switchCameraBtn = document.getElementById("switchCameraBtn");
-const resetGuideBtn = document.getElementById("resetGuideBtn");
+// 버튼들: id 이름이 다를 수 있어서 여러 후보를 동시에 확인
+const captureBtn =
+  document.getElementById("captureBtn") ||
+  document.getElementById("captureButton") || // 혹시 이렇게 썼을 경우
+  document.querySelector("[data-role='captureBtn']");
 
-const usageText = document.getElementById("usageText");
-const usageBadge = document.getElementById("usageBadge");
-const message = document.getElementById("message");
+const switchCameraBtn =
+  document.getElementById("switchCameraBtn") ||
+  document.getElementById("cameraSwitchBtn") ||
+  document.querySelector("[data-role='switchCameraBtn']");
 
-const resultSection = document.getElementById("resultSection");
-const foodNameEl = document.getElementById("foodName");
-const calorieValueEl = document.getElementById("calorieValue");
-const resultNoteEl = document.getElementById("resultNote");
+const resetGuideBtn =
+  document.getElementById("resetGuideBtn") ||
+  document.getElementById("showGuideBtn") ||
+  document.querySelector("[data-role='resetGuideBtn']");
 
-const historySection = document.getElementById("historySection");
-const historyDateLabel = document.getElementById("historyDateLabel");
-const historyList = document.getElementById("historyList");
-const historyTotalEl = document.getElementById("historyTotal");
-const historyClearBtn = document.getElementById("historyClearBtn");
+const usageText =
+  document.getElementById("usageText") ||
+  document.getElementById("usageLabel") ||
+  document.querySelector("[data-role='usageText']");
 
-const subscriptionModal = document.getElementById("subscriptionModal");
-const closeModalBtn = document.getElementById("closeModalBtn");
-const subscribeBtn = document.getElementById("subscribeBtn");
-const laterBtn = document.getElementById("laterBtn");
+const usageBadge =
+  document.getElementById("usageBadge") ||
+  document.getElementById("usageTag") ||
+  document.querySelector("[data-role='usageBadge']");
 
-// 날짜 유틸
+const message =
+  document.getElementById("message") ||
+  document.getElementById("helperMessage") ||
+  document.querySelector("[data-role='message']");
+
+const resultSection =
+  document.getElementById("resultSection") ||
+  document.getElementById("analysisResult") ||
+  document.querySelector("[data-role='resultSection']");
+
+const foodNameEl =
+  document.getElementById("foodName") ||
+  document.getElementById("foodTitle") ||
+  document.querySelector("[data-role='foodName']");
+
+const calorieValueEl =
+  document.getElementById("calorieValue") ||
+  document.getElementById("calorieNumber") ||
+  document.querySelector("[data-role='calorieValue']");
+
+const resultNoteEl =
+  document.getElementById("resultNote") ||
+  document.getElementById("resultText") ||
+  document.querySelector("[data-role='resultNote']");
+
+const historySection =
+  document.getElementById("historySection") ||
+  document.getElementById("todayHistory") ||
+  document.querySelector("[data-role='historySection']");
+
+const historyDateLabel =
+  document.getElementById("historyDateLabel") ||
+  document.getElementById("historyTitle") ||
+  document.querySelector("[data-role='historyDateLabel']");
+
+const historyList =
+  document.getElementById("historyList") ||
+  document.querySelector("[data-role='historyList']");
+
+const historyTotalEl =
+  document.getElementById("historyTotal") ||
+  document.querySelector("[data-role='historyTotal']");
+
+const historyClearBtn =
+  document.getElementById("historyClearBtn") ||
+  document.querySelector("[data-role='historyClearBtn']");
+
+const subscriptionModal =
+  document.getElementById("subscriptionModal") ||
+  document.querySelector("[data-role='subscriptionModal']");
+
+const closeModalBtn =
+  document.getElementById("closeModalBtn") ||
+  document.querySelector("[data-role='closeModalBtn']");
+
+const subscribeBtn =
+  document.getElementById("subscribeBtn") ||
+  document.querySelector("[data-role='subscribeBtn']");
+
+const laterBtn =
+  document.getElementById("laterBtn") ||
+  document.querySelector("[data-role='laterBtn']");
+
+// ===== 날짜 유틸 =====
 function getTodayKey() {
   const d = new Date();
   return d.toISOString().slice(0, 10);
@@ -58,7 +123,7 @@ function formatTodayLabel(key) {
   return `${y}년 ${parseInt(m, 10)}월 ${parseInt(d, 10)}일`;
 }
 
-// ── 오늘 기록 ──
+// ===== 오늘 기록 =====
 function loadHistory() {
   const raw = localStorage.getItem(todayHistoryKey);
   if (!raw) {
@@ -98,6 +163,8 @@ function clearTodayHistory() {
   renderHistory();
 }
 function renderHistory() {
+  if (!historySection || !historyList || !historyTotalEl || !historyDateLabel) return;
+
   if (!history || history.length === 0) {
     historySection.style.display = "none";
     historyList.innerHTML = "";
@@ -143,7 +210,7 @@ function renderHistory() {
   historyTotalEl.textContent = total.toString();
 }
 
-// ── 카메라 ──
+// ===== 카메라 =====
 async function startCamera() {
   try {
     if (currentStream) {
@@ -152,8 +219,10 @@ async function startCamera() {
     const constraints = { video: { facingMode: currentFacingMode }, audio: false };
     const stream = await navigator.mediaDevices.getUserMedia(constraints);
     currentStream = stream;
-    video.srcObject = stream;
-    await video.play();
+    if (video) {
+      video.srcObject = stream;
+      await video.play();
+    }
     setMessage("찍고 싶은 음식이 화면 중앙에 오도록 맞춰주세요. 📸", "info");
   } catch (err) {
     console.error(err);
@@ -162,6 +231,7 @@ async function startCamera() {
 }
 
 function setMessage(text, type = "info") {
+  if (!message) return;
   message.textContent = text || "";
   if (!text) return;
   if (type === "error") message.style.color = "#fb7185";
@@ -170,26 +240,32 @@ function setMessage(text, type = "info") {
 }
 
 function updateUsageUI() {
-  usageText.textContent = `무료 사용: ${captureCount} / ${MAX_FREE_USES}회`;
+  if (usageText) {
+    usageText.textContent = `무료 사용: ${captureCount} / ${MAX_FREE_USES}회`;
+  }
+  if (!usageBadge) return;
+
   if (captureCount >= MAX_FREE_USES) {
     usageBadge.textContent = "LIMIT REACHED";
     usageBadge.classList.add("limit");
-    captureBtn.disabled = true;
+    if (captureBtn) captureBtn.disabled = true;
   } else {
     usageBadge.textContent = "FREE MODE";
     usageBadge.classList.remove("limit");
-    captureBtn.disabled = false;
+    if (captureBtn) captureBtn.disabled = false;
   }
 }
 
 function openSubscriptionModal() {
+  if (!subscriptionModal) return;
   subscriptionModal.classList.add("active");
 }
 function closeSubscriptionModal() {
+  if (!subscriptionModal) return;
   subscriptionModal.classList.remove("active");
 }
 
-// ── 데모용 음식 (서버 실패시 fallback) ──
+// ===== 데모용 음식 (서버 실패시 fallback) =====
 const demoFoods = [
   { name: "김밥(1줄)", kcal: 320, note: "일반적인 김밥 1줄 기준 대략적인 칼로리입니다." },
   { name: "치킨(한 조각)", kcal: 250, note: "조리 방법에 따라 실제 칼로리는 달라질 수 있어요." },
@@ -202,7 +278,7 @@ function getRandomFoodResult() {
   return demoFoods[Math.floor(Math.random() * demoFoods.length)];
 }
 
-// ── AI 서버 호출 (base64 JSON) ──
+// ===== AI 서버 호출 (base64 JSON) =====
 async function analyzeImageWithServer(dataUrl) {
   try {
     const res = await fetch("/api/analyze", {
@@ -229,7 +305,7 @@ async function analyzeImageWithServer(dataUrl) {
   }
 }
 
-// ── 촬영 & 분석 ──
+// ===== 촬영 & 분석 =====
 async function captureAndAnalyze() {
   if (captureCount >= MAX_FREE_USES) {
     updateUsageUI();
@@ -285,6 +361,7 @@ async function captureAndAnalyze() {
 }
 
 function showResult(result) {
+  if (!resultSection || !foodNameEl || !calorieValueEl || !resultNoteEl) return;
   foodNameEl.textContent = result.name;
   calorieValueEl.textContent = result.kcal;
   resultNoteEl.textContent =
@@ -294,9 +371,11 @@ function showResult(result) {
 
 // 안내 오버레이
 function hideGuideOverlay() {
+  if (!guideOverlay) return;
   guideOverlay.classList.add("hidden");
 }
 function showGuideOverlay() {
+  if (!guideOverlay) return;
   guideOverlay.classList.remove("hidden");
   setMessage("화면 중앙에 음식이 잘 보이도록 맞춰주세요. 📷", "info");
 }
@@ -317,7 +396,7 @@ function registerServiceWorker() {
   }
 }
 
-// 초기화
+// ===== 초기화 =====
 document.addEventListener("DOMContentLoaded", () => {
   todayHistoryKey = "smartcalHistory-" + getTodayKey();
 
@@ -327,11 +406,18 @@ document.addEventListener("DOMContentLoaded", () => {
   loadHistory();
   registerServiceWorker();
 
-  captureBtn.addEventListener("click", () => {
-    captureAndAnalyze();
-  });
-  switchCameraBtn.addEventListener("click", toggleCamera);
-  resetGuideBtn.addEventListener("click", showGuideOverlay);
+  if (captureBtn) {
+    captureBtn.addEventListener("click", () => {
+      captureAndAnalyze();
+    });
+  }
+
+  if (switchCameraBtn) {
+    switchCameraBtn.addEventListener("click", toggleCamera);
+  }
+  if (resetGuideBtn) {
+    resetGuideBtn.addEventListener("click", showGuideOverlay);
+  }
 
   if (historyClearBtn) {
     historyClearBtn.addEventListener("click", () => {
@@ -361,7 +447,9 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  subscriptionModal.addEventListener("click", (e) => {
-    if (e.target === subscriptionModal) closeSubscriptionModal();
-  });
+  if (subscriptionModal) {
+    subscriptionModal.addEventListener("click", (e) => {
+      if (e.target === subscriptionModal) closeSubscriptionModal();
+    });
+  }
 });
