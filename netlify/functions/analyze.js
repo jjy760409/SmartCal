@@ -1,6 +1,8 @@
 // netlify/functions/analyze.js
-// SmartCal AI 서버 함수 (1단계 데모 버전)
-// 나중에 여기 내부만 YOLO 분석으로 교체하면 됨
+// SmartCal AI 서버 함수 (다중 음식 데모 버전)
+// - 프론트에서 base64 data URL을 받는다 (body.image)
+// - 임시로 여러 개 음식 결과를 랜덤으로 만든다
+// - 나중에 이 부분만 YOLO/AI 분석 코드로 교체하면 됨
 
 exports.handler = async (event, context) => {
   const defaultHeaders = {
@@ -8,7 +10,7 @@ exports.handler = async (event, context) => {
     "Access-Control-Allow-Origin": "*"
   };
 
-  // CORS 사전 요청 처리
+  // CORS preflight
   if (event.httpMethod === "OPTIONS") {
     return {
       statusCode: 200,
@@ -41,22 +43,43 @@ exports.handler = async (event, context) => {
       };
     }
 
-    // TODO: 여기서 data URL → base64 → YOLO 모델로 분석 예정
+    // TODO: 여기에서 data URL → base64 분리 → YOLO/AI 모델 분석 예정
 
-    const demoFoods = [
-      { foodName: "김밥(1줄)", calories: 320, note: "일반적인 김밥 1줄 기준 대략적인 칼로리입니다." },
-      { foodName: "치킨(한 조각)", calories: 250, note: "조리 방법에 따라 실제 칼로리는 달라질 수 있어요." },
-      { foodName: "햄버거(1개)", calories: 450, note: "소스와 사이즈에 따라 차이가 큽니다." },
-      { foodName: "샐러드(1그릇)", calories: 110, note: "드레싱을 많이 넣으면 칼로리가 올라갑니다." },
-      { foodName: "라면(1봉지)", calories: 500, note: "국물을 덜 마시면 칼로리를 조금 줄일 수 있어요." },
-      { foodName: "초콜릿(1조각)", calories: 60, note: "당분 섭취를 조절하면서 드시는 걸 추천합니다." }
+    // ── 데모용 음식 목록 ──
+    const foodCandidates = [
+      { foodName: "김밥(1줄)", calories: 320 },
+      { foodName: "치킨(한 조각)", calories: 250 },
+      { foodName: "햄버거(1개)", calories: 450 },
+      { foodName: "샐러드(1그릇)", calories: 110 },
+      { foodName: "라면(1봉지)", calories: 500 },
+      { foodName: "초콜릿(1조각)", calories: 60 }
     ];
-    const result = demoFoods[Math.floor(Math.random() * demoFoods.length)];
+
+    // 1~3개 랜덤 선택 (중복 없이)
+    const count = Math.floor(Math.random() * 3) + 1; // 1,2,3 중 하나
+    const shuffled = [...foodCandidates].sort(() => Math.random() - 0.5);
+    const items = shuffled.slice(0, count);
+
+    const totalCalories = items.reduce(
+      (sum, item) => sum + (item.calories || 0),
+      0
+    );
+
+    const note =
+      count === 1
+        ? "단일 음식에 대한 데모 분석 결과입니다."
+        : "여러 음식을 함께 인식한 데모 분석 결과입니다. 실제 YOLO 모델 연결 시 보다 정확한 결과가 제공됩니다.";
+
+    const responseBody = {
+      items,          // [{ foodName, calories }, ...]
+      totalCalories,  // 합산 칼로리
+      note            // 전체 설명
+    };
 
     return {
       statusCode: 200,
       headers: defaultHeaders,
-      body: JSON.stringify(result)
+      body: JSON.stringify(responseBody)
     };
   } catch (err) {
     console.error("Analyze function error:", err);
