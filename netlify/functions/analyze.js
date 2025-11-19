@@ -1,8 +1,6 @@
 // netlify/functions/analyze.js
 // SmartCal AI 서버 함수 (1단계 데모 버전)
-// - 이미지를 받아서
-// - 랜덤 음식 결과를 반환
-// - 나중에 YOLO 분석 추가 예정
+// 나중에 여기 내부만 YOLO 분석으로 교체하면 됨
 
 exports.handler = async (event, context) => {
   const defaultHeaders = {
@@ -10,6 +8,7 @@ exports.handler = async (event, context) => {
     "Access-Control-Allow-Origin": "*"
   };
 
+  // CORS 사전 요청 처리
   if (event.httpMethod === "OPTIONS") {
     return {
       statusCode: 200,
@@ -41,6 +40,8 @@ exports.handler = async (event, context) => {
         body: JSON.stringify({ error: "image field is required" })
       };
     }
+
+    // TODO: 여기서 data URL → base64 → YOLO 모델로 분석 예정
 
     const demoFoods = [
       { foodName: "김밥(1줄)", calories: 320, note: "일반적인 김밥 1줄 기준 대략적인 칼로리입니다." },
