@@ -1,6 +1,8 @@
-// SmartCal AI - Netlify Functions 연동 버전 (버튼 ID 자동 인식 버전)
+// SmartCal AI - Netlify Functions 연동 버전 (다중 음식 데모 + YOLO 준비)
 // - 3회 무료 제한 + 구독 모달
 // - /api/analyze 로 이미지(JSON, base64) 전송
+// - 서버는 여러 음식(items)과 totalCalories를 돌려줌
+// - 프론트는 음식 이름을 합쳐서 표시 + 총 칼로리 계산
 // - 오늘 섭취 기록 + 총 칼로리
 // - PWA 서비스워커 등록
 
@@ -14,15 +16,14 @@ let currentFacingMode = "environment";
 let todayHistoryKey = "";
 let history = [];
 
-// ===== DOM 요소 가져오기 (ID 여러 개 대비) =====
+// ===== DOM 요소 =====
 const video = document.getElementById("video");
 const canvas = document.getElementById("canvas");
 const guideOverlay = document.getElementById("guideOverlay");
 
-// 버튼들: id 이름이 다를 수 있어서 여러 후보를 동시에 확인
 const captureBtn =
   document.getElementById("captureBtn") ||
-  document.getElementById("captureButton") || // 혹시 이렇게 썼을 경우
+  document.getElementById("captureButton") ||
   document.querySelector("[data-role='captureBtn']");
 
 const switchCameraBtn =
@@ -123,7 +124,7 @@ function formatTodayLabel(key) {
   return `${y}년 ${parseInt(m, 10)}월 ${parseInt(d, 10)}일`;
 }
 
-// ===== 오늘 기록 =====
+// ===== 오늘 기록 관리 =====
 function loadHistory() {
   const raw = localStorage.getItem(todayHistoryKey);
   if (!raw) {
@@ -265,7 +266,7 @@ function closeSubscriptionModal() {
   subscriptionModal.classList.remove("active");
 }
 
-// ===== 데모용 음식 (서버 실패시 fallback) =====
+// ===== 서버 실패시 데모 데이터 =====
 const demoFoods = [
   { name: "김밥(1줄)", kcal: 320, note: "일반적인 김밥 1줄 기준 대략적인 칼로리입니다." },
   { name: "치킨(한 조각)", kcal: 250, note: "조리 방법에 따라 실제 칼로리는 달라질 수 있어요." },
@@ -278,7 +279,7 @@ function getRandomFoodResult() {
   return demoFoods[Math.floor(Math.random() * demoFoods.length)];
 }
 
-// ===== AI 서버 호출 (base64 JSON) =====
+// ===== AI 서버 호출 (다중 음식 지원) =====
 async function analyzeImageWithServer(dataUrl) {
   try {
     const res = await fetch("/api/analyze", {
@@ -290,15 +291,41 @@ async function analyzeImageWithServer(dataUrl) {
     if (!res.ok) throw new Error("Server error");
     const data = await res.json();
 
-    if (!data || !data.foodName || !data.calories) {
-      throw new Error("Invalid response");
+    // 1️⃣ 새 구조: items + totalCalories
+    if (data.items && Array.isArray(data.items) && data.items.length > 0) {
+      const items = data.items.map((item) => ({
+        foodName: item.foodName || item.name || "알 수 없는 음식",
+        calories: Number(item.calories || item.kcal || 0)
+      }));
+
+      const total = data.totalCalories
+        ? Number(data.totalCalories)
+        : items.reduce((sum, it) => sum + it.calories, 0);
+
+      const combinedName = items.map((it) => it.foodName).join(" + ");
+
+      const lines = items.map(
+        (it) => `• ${it.foodName}: ${it.calories} kcal`
+      );
+      if (data.note) lines.push("", data.note);
+
+      return {
+        name: combinedName,
+        kcal: total,
+        note: lines.join("\n")
+      };
     }
 
-    return {
-      name: data.foodName,
-      kcal: data.calories,
-      note: data.note || "AI 분석 결과를 기반으로 한 추정 칼로리입니다."
-    };
+    // 2️⃣ 예전 구조: foodName + calories
+    if (data.foodName && data.calories) {
+      return {
+        name: data.foodName,
+        kcal: data.calories,
+        note: data.note || "AI 분석 결과를 기반으로 한 추정 칼로리입니다."
+      };
+    }
+
+    throw new Error("Invalid response");
   } catch (err) {
     console.warn("AI 서버 호출 실패, 데모 모드 사용:", err);
     return null;
@@ -337,8 +364,12 @@ async function captureAndAnalyze() {
     let result = await analyzeImageWithServer(dataUrl);
 
     if (!result) {
-      result = getRandomFoodResult();
-      result.note = (result.note || "") + " (데모 모드 결과입니다.)";
+      const demo = getRandomFoodResult();
+      result = {
+        name: demo.name,
+        kcal: demo.kcal,
+        note: (demo.note || "") + " (데모 모드 결과입니다.)"
+      };
     }
 
     captureCount += 1;
@@ -362,14 +393,15 @@ async function captureAndAnalyze() {
 
 function showResult(result) {
   if (!resultSection || !foodNameEl || !calorieValueEl || !resultNoteEl) return;
-  foodNameEl.textContent = result.name;
-  calorieValueEl.textContent = result.kcal;
+  foodNameEl.textContent = result.name;      // ex) "김밥(1줄) + 치킨(한 조각)"
+  calorieValueEl.textContent = result.kcal;  // 합산 kcal
   resultNoteEl.textContent =
-    result.note || "촬영한 이미지를 기반으로 대략적인 칼로리를 추정합니다.";
+    result.note ||
+    "촬영한 이미지를 기반으로 대략적인 칼로리를 추정합니다.";
   resultSection.style.display = "block";
 }
 
-// 안내 오버레이
+// ===== 안내 오버레이 =====
 function hideGuideOverlay() {
   if (!guideOverlay) return;
   guideOverlay.classList.add("hidden");
@@ -380,19 +412,22 @@ function showGuideOverlay() {
   setMessage("화면 중앙에 음식이 잘 보이도록 맞춰주세요. 📷", "info");
 }
 
-// 카메라 전환
+// ===== 카메라 전환 =====
 function toggleCamera() {
-  currentFacingMode = currentFacingMode === "environment" ? "user" : "environment";
+  currentFacingMode =
+    currentFacingMode === "environment" ? "user" : "environment";
   startCamera();
 }
 
-// PWA 서비스워커 등록
+// ===== PWA 서비스워커 등록 =====
 function registerServiceWorker() {
   if ("serviceWorker" in navigator) {
     navigator.serviceWorker
       .register("service-worker.js")
       .then(() => console.log("Service worker registered"))
-      .catch((err) => console.warn("Service worker registration failed:", err));
+      .catch((err) =>
+        console.warn("Service worker registration failed:", err)
+      );
   }
 }
 
@@ -429,6 +464,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   if (closeModalBtn) {
+    closeSubscriptionModal();
     closeModalBtn.addEventListener("click", closeSubscriptionModal);
   }
   if (laterBtn) {
@@ -442,7 +478,10 @@ document.addEventListener("DOMContentLoaded", () => {
       alert(
         "현재는 데모 버전입니다.\n\n예시 요금제: SmartCal AI PRO · 월 4,900원 (부가세 별도)\n\n정식 출시 시 실제 결제 화면이 연결됩니다."
       );
-      setMessage("현재는 데모 버전입니다. 정식 구독 기능은 곧 연결될 예정입니다. 🚀", "info");
+      setMessage(
+        "현재는 데모 버전입니다. 정식 구독 기능은 곧 연결될 예정입니다. 🚀",
+        "info"
+      );
       closeSubscriptionModal();
     });
   }
