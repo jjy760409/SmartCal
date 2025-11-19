@@ -1,15 +1,60 @@
 // netlify/functions/analyze.js
-// SmartCal AI 서버 함수 (다중 음식 데모 버전)
-// - 프론트에서 base64 data URL을 받는다 (body.image)
-// - 임시로 여러 개 음식 결과를 랜덤으로 만든다
-// - 나중에 이 부분만 YOLO/AI 분석 코드로 교체하면 됨
+// SmartCal AI 서버 함수 (YOLO 연동 준비 + 다중 음식 데모)
+// - 프론트에서 base64 data URL(image) 받기
+// - 1순위: YOLO 서버가 설정되어 있으면 그쪽으로 요청
+// - 2순위: YOLO가 없으면 현재처럼 랜덤 다중 음식 데모 결과 반환
 
+const YOLO_API_URL = process.env.YOLO_API_URL;   // Netlify 환경변수에서 가져올 예정
+const YOLO_API_KEY = process.env.YOLO_API_KEY || null;
+
+const defaultHeaders = {
+  "Content-Type": "application/json; charset=utf-8",
+  "Access-Control-Allow-Origin": "*"
+};
+
+// ── YOLO 서버 호출 함수 ──
+async function callYoloApi(imageDataUrl) {
+  if (!YOLO_API_URL) {
+    // YOLO 서버 주소가 아직 설정되지 않은 경우
+    return null;
+  }
+
+  try {
+    const headers = {
+      "Content-Type": "application/json"
+    };
+    if (YOLO_API_KEY) {
+      // 선택: 인증 토큰이 필요할 경우
+      headers["Authorization"] = `Bearer ${YOLO_API_KEY}`;
+    }
+
+    const res = await fetch(YOLO_API_URL, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({ image: imageDataUrl })
+    });
+
+    if (!res.ok) {
+      throw new Error(`YOLO server error: ${res.status}`);
+    }
+
+    const data = await res.json();
+
+    // 기대하는 형식:
+    // { items: [{ foodName, calories, box?, confidence? }...], totalCalories, note? }
+    if (!data || !Array.isArray(data.items) || data.items.length === 0) {
+      throw new Error("YOLO result is empty");
+    }
+
+    return data;
+  } catch (err) {
+    console.error("YOLO API call failed:", err);
+    return null;
+  }
+}
+
+// ── Netlify handler ──
 exports.handler = async (event, context) => {
-  const defaultHeaders = {
-    "Content-Type": "application/json; charset=utf-8",
-    "Access-Control-Allow-Origin": "*"
-  };
-
   // CORS preflight
   if (event.httpMethod === "OPTIONS") {
     return {
@@ -17,7 +62,7 @@ exports.handler = async (event, context) => {
       headers: {
         ...defaultHeaders,
         "Access-Control-Allow-Methods": "POST,OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type"
+        "Access-Control-Allow-Headers": "Content-Type,Authorization"
       },
       body: ""
     };
@@ -43,9 +88,18 @@ exports.handler = async (event, context) => {
       };
     }
 
-    // TODO: 여기에서 data URL → base64 분리 → YOLO/AI 모델 분석 예정
+    // 1️⃣ 먼저 YOLO 서버가 있다면 호출 시도
+    const yoloResult = await callYoloApi(imageDataUrl);
+    if (yoloResult) {
+      // YOLO 서버가 정상 응답을 줬다면 그대로 프론트로 전달
+      return {
+        statusCode: 200,
+        headers: defaultHeaders,
+        body: JSON.stringify(yoloResult)
+      };
+    }
 
-    // ── 데모용 음식 목록 ──
+    // 2️⃣ YOLO 서버가 없거나 실패한 경우 → 기존 데모 랜덤 다중 음식
     const foodCandidates = [
       { foodName: "김밥(1줄)", calories: 320 },
       { foodName: "치킨(한 조각)", calories: 250 },
@@ -55,8 +109,7 @@ exports.handler = async (event, context) => {
       { foodName: "초콜릿(1조각)", calories: 60 }
     ];
 
-    // 1~3개 랜덤 선택 (중복 없이)
-    const count = Math.floor(Math.random() * 3) + 1; // 1,2,3 중 하나
+    const count = Math.floor(Math.random() * 3) + 1; // 1~3개
     const shuffled = [...foodCandidates].sort(() => Math.random() - 0.5);
     const items = shuffled.slice(0, count);
 
@@ -67,13 +120,13 @@ exports.handler = async (event, context) => {
 
     const note =
       count === 1
-        ? "단일 음식에 대한 데모 분석 결과입니다."
-        : "여러 음식을 함께 인식한 데모 분석 결과입니다. 실제 YOLO 모델 연결 시 보다 정확한 결과가 제공됩니다.";
+        ? "단일 음식에 대한 데모 분석 결과입니다. YOLO 서버 연결 시 실제 인식 결과로 대체됩니다."
+        : "여러 음식을 함께 인식한 데모 분석 결과입니다. YOLO 서버 연결 시 실제 인식 결과로 대체됩니다.";
 
     const responseBody = {
-      items,          // [{ foodName, calories }, ...]
-      totalCalories,  // 합산 칼로리
-      note            // 전체 설명
+      items,
+      totalCalories,
+      note
     };
 
     return {
