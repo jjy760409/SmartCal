@@ -165,4 +165,203 @@ function setMessage(text, type = "info") {
   message.textContent = text || "";
   if (!text) return;
   if (type === "error") message.style.color = "#fb7185";
-  else if (typ
+  else if (type === "warn") message.style.color = "#facc15";
+  else message.style.color = "#f97316";
+}
+
+function updateUsageUI() {
+  usageText.textContent = `무료 사용: ${captureCount} / ${MAX_FREE_USES}회`;
+  if (captureCount >= MAX_FREE_USES) {
+    usageBadge.textContent = "LIMIT REACHED";
+    usageBadge.classList.add("limit");
+    captureBtn.disabled = true;
+  } else {
+    usageBadge.textContent = "FREE MODE";
+    usageBadge.classList.remove("limit");
+    captureBtn.disabled = false;
+  }
+}
+
+function openSubscriptionModal() {
+  subscriptionModal.classList.add("active");
+}
+function closeSubscriptionModal() {
+  subscriptionModal.classList.remove("active");
+}
+
+// ── 데모용 음식 (서버 실패시 fallback) ──
+const demoFoods = [
+  { name: "김밥(1줄)", kcal: 320, note: "일반적인 김밥 1줄 기준 대략적인 칼로리입니다." },
+  { name: "치킨(한 조각)", kcal: 250, note: "조리 방법에 따라 실제 칼로리는 달라질 수 있어요." },
+  { name: "햄버거(1개)", kcal: 450, note: "소스와 사이즈에 따라 차이가 큽니다." },
+  { name: "샐러드(1그릇)", kcal: 110, note: "드레싱을 많이 넣으면 칼로리가 올라갑니다." },
+  { name: "라면(1봉지)", kcal: 500, note: "국물을 덜 마시면 칼로리를 조금 줄일 수 있어요." },
+  { name: "초콜릿(1조각)", kcal: 60, note: "당분 섭취를 조절하면서 드시는 걸 추천합니다." }
+];
+function getRandomFoodResult() {
+  return demoFoods[Math.floor(Math.random() * demoFoods.length)];
+}
+
+// ── AI 서버 호출 (base64 JSON) ──
+async function analyzeImageWithServer(dataUrl) {
+  try {
+    const res = await fetch("/api/analyze", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ image: dataUrl })
+    });
+
+    if (!res.ok) throw new Error("Server error");
+    const data = await res.json();
+
+    if (!data || !data.foodName || !data.calories) {
+      throw new Error("Invalid response");
+    }
+
+    return {
+      name: data.foodName,
+      kcal: data.calories,
+      note: data.note || "AI 분석 결과를 기반으로 한 추정 칼로리입니다."
+    };
+  } catch (err) {
+    console.warn("AI 서버 호출 실패, 데모 모드 사용:", err);
+    return null;
+  }
+}
+
+// ── 촬영 & 분석 ──
+async function captureAndAnalyze() {
+  if (captureCount >= MAX_FREE_USES) {
+    updateUsageUI();
+    openSubscriptionModal();
+    setMessage("무료 체험 3회가 모두 사용되었습니다. 😊", "warn");
+    return;
+  }
+  if (!video || video.readyState < 2) {
+    setMessage("카메라가 아직 준비되지 않았어요. 잠시 후 다시 시도해 주세요.", "warn");
+    return;
+  }
+
+  try {
+    const width = video.videoWidth;
+    const height = video.videoHeight;
+    if (!width || !height) {
+      setMessage("카메라 화면 정보를 가져오지 못했어요. 다시 시도해 주세요.", "error");
+      return;
+    }
+
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext("2d");
+    ctx.drawImage(video, 0, 0, width, height);
+
+    setMessage("AI가 이미지를 분석 중입니다… ⏳", "info");
+    const dataUrl = canvas.toDataURL("image/jpeg", 0.8);
+
+    let result = await analyzeImageWithServer(dataUrl);
+
+    if (!result) {
+      result = getRandomFoodResult();
+      result.note = (result.note || "") + " (데모 모드 결과입니다.)";
+    }
+
+    captureCount += 1;
+    updateUsageUI();
+    hideGuideOverlay();
+
+    showResult(result);
+    addHistoryEntry(result);
+
+    if (captureCount >= MAX_FREE_USES) {
+      openSubscriptionModal();
+      setMessage("무료 3회 체험이 끝났어요. 구독 안내를 확인해 주세요. 🙌", "warn");
+    } else {
+      setMessage("분석이 완료되었습니다! 결과를 확인해 보세요. ✅", "info");
+    }
+  } catch (err) {
+    console.error(err);
+    setMessage("이미지 분석 중 오류가 발생했어요. 다시 시도해 주세요.", "error");
+  }
+}
+
+function showResult(result) {
+  foodNameEl.textContent = result.name;
+  calorieValueEl.textContent = result.kcal;
+  resultNoteEl.textContent =
+    result.note || "촬영한 이미지를 기반으로 대략적인 칼로리를 추정합니다.";
+  resultSection.style.display = "block";
+}
+
+// 안내 오버레이
+function hideGuideOverlay() {
+  guideOverlay.classList.add("hidden");
+}
+function showGuideOverlay() {
+  guideOverlay.classList.remove("hidden");
+  setMessage("화면 중앙에 음식이 잘 보이도록 맞춰주세요. 📷", "info");
+}
+
+// 카메라 전환
+function toggleCamera() {
+  currentFacingMode = currentFacingMode === "environment" ? "user" : "environment";
+  startCamera();
+}
+
+// PWA 서비스워커 등록
+function registerServiceWorker() {
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker
+      .register("service-worker.js")
+      .then(() => console.log("Service worker registered"))
+      .catch((err) => console.warn("Service worker registration failed:", err));
+  }
+}
+
+// 초기화
+document.addEventListener("DOMContentLoaded", () => {
+  todayHistoryKey = "smartcalHistory-" + getTodayKey();
+
+  updateUsageUI();
+  showGuideOverlay();
+  startCamera();
+  loadHistory();
+  registerServiceWorker();
+
+  captureBtn.addEventListener("click", () => {
+    captureAndAnalyze();
+  });
+  switchCameraBtn.addEventListener("click", toggleCamera);
+  resetGuideBtn.addEventListener("click", showGuideOverlay);
+
+  if (historyClearBtn) {
+    historyClearBtn.addEventListener("click", () => {
+      if (confirm("오늘 기록을 모두 삭제할까요?")) {
+        clearTodayHistory();
+        setMessage("오늘 섭취 기록이 삭제되었습니다.", "info");
+      }
+    });
+  }
+
+  if (closeModalBtn) {
+    closeModalBtn.addEventListener("click", closeSubscriptionModal);
+  }
+  if (laterBtn) {
+    laterBtn.addEventListener("click", () => {
+      closeSubscriptionModal();
+      setMessage("언제든지 다시 촬영하시면 구독 안내를 볼 수 있어요. 😊", "info");
+    });
+  }
+  if (subscribeBtn) {
+    subscribeBtn.addEventListener("click", () => {
+      alert(
+        "현재는 데모 버전입니다.\n\n예시 요금제: SmartCal AI PRO · 월 4,900원 (부가세 별도)\n\n정식 출시 시 실제 결제 화면이 연결됩니다."
+      );
+      setMessage("현재는 데모 버전입니다. 정식 구독 기능은 곧 연결될 예정입니다. 🚀", "info");
+      closeSubscriptionModal();
+    });
+  }
+
+  subscriptionModal.addEventListener("click", (e) => {
+    if (e.target === subscriptionModal) closeSubscriptionModal();
+  });
+});
