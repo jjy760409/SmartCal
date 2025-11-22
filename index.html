@@ -4,465 +4,170 @@
   <meta charset="UTF-8" />
   <title>SmartCal AI - Camera Calorie Scanner</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-
-  <!-- 기본 폰트 & 스타일 -->
-  <style>
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
-
-    body {
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      background: radial-gradient(circle at top, #020817 0, #020617 40%, #000 100%);
-      color: #e5e7eb;
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      padding: 16px;
-    }
-
-    header {
-      text-align: center;
-      margin-bottom: 16px;
-    }
-
-    header h1 {
-      font-size: 1.6rem;
-      font-weight: 700;
-      letter-spacing: 0.06em;
-      color: #e0f2fe;
-      text-shadow: 0 0 12px rgba(56, 189, 248, 0.9);
-    }
-
-    header p {
-      font-size: 0.9rem;
-      color: #9ca3af;
-      margin-top: 4px;
-    }
-
-    .app-container {
-      width: 100%;
-      max-width: 480px;
-      background: rgba(15, 23, 42, 0.9);
-      border-radius: 18px;
-      padding: 14px;
-      box-shadow:
-        0 0 0 1px rgba(148, 163, 184, 0.2),
-        0 18px 45px rgba(15, 23, 42, 0.9);
-      position: relative;
-    }
-
-    .camera-wrapper {
-      position: relative;
-      border-radius: 16px;
-      overflow: hidden;
-      border: 1px solid rgba(148, 163, 184, 0.3);
-      background: radial-gradient(circle at top, #0b1120, #020617);
-    }
-
-    video,
-    canvas {
-      width: 100%;
-      display: block;
-      background: #000;
-    }
-
-    canvas {
-      display: none;
-    }
-
-    /* 🔮 미래형 안내 오버레이 */
-    #guideOverlay {
-      position: absolute;
-      inset: 0;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      pointer-events: none;
-      background: radial-gradient(circle at center, rgba(15, 23, 42, 0.4), transparent 65%);
-      transition: opacity 0.35s ease;
-    }
-
-    #guideOverlay.hidden {
-      opacity: 0;
-      visibility: hidden;
-    }
-
-    .guide-chip {
-      padding: 6px 12px;
-      border-radius: 999px;
-      border: 1px solid rgba(56, 189, 248, 0.8);
-      background: rgba(8, 47, 73, 0.7);
-      font-size: 0.7rem;
-      letter-spacing: 0.12em;
-      text-transform: uppercase;
-      color: #e0f2fe;
-      margin-bottom: 10px;
-      text-shadow: 0 0 8px rgba(56, 189, 248, 0.8);
-    }
-
-    .guide-main-text {
-      font-size: 0.98rem;
-      font-weight: 600;
-      line-height: 1.5;
-      text-align: center;
-      color: #f9fafb;
-      text-shadow:
-        0 0 8px rgba(56, 189, 248, 0.9),
-        0 0 20px rgba(59, 130, 246, 0.7);
-      padding: 0 24px;
-      animation: pulseGlow 2.2s ease-in-out infinite;
-    }
-
-    .guide-sub-text {
-      margin-top: 8px;
-      font-size: 0.8rem;
-      color: #cbd5f5;
-      opacity: 0.9;
-    }
-
-    @keyframes pulseGlow {
-      0%, 100% {
-        text-shadow:
-          0 0 8px rgba(56, 189, 248, 0.8),
-          0 0 16px rgba(59, 130, 246, 0.6);
-        transform: scale(1);
-      }
-      50% {
-        text-shadow:
-          0 0 16px rgba(56, 189, 248, 0.95),
-          0 0 28px rgba(59, 130, 246, 0.9);
-        transform: scale(1.02);
-      }
-    }
-
-    .controls {
-      display: flex;
-      gap: 8px;
-      margin-top: 12px;
-      justify-content: center;
-      flex-wrap: wrap;
-    }
-
-    button {
-      border: none;
-      cursor: pointer;
-      border-radius: 999px;
-      padding: 10px 16px;
-      font-size: 0.9rem;
-      font-weight: 600;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 6px;
-      transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.12s ease;
-      white-space: nowrap;
-    }
-
-    button:active {
-      transform: scale(0.97);
-      box-shadow: none;
-    }
-
-    .primary-btn {
-      background: radial-gradient(circle at top left, #38bdf8, #0ea5e9);
-      color: #0b1120;
-      box-shadow: 0 10px 25px rgba(56, 189, 248, 0.45);
-    }
-
-    .primary-btn:disabled {
-      background: #1f2937;
-      color: #9ca3af;
-      box-shadow: none;
-      cursor: not-allowed;
-    }
-
-    .secondary-btn {
-      background: rgba(15, 23, 42, 0.9);
-      color: #e5e7eb;
-      border: 1px solid rgba(148, 163, 184, 0.7);
-    }
-
-    .ghost-btn {
-      background: transparent;
-      color: #9ca3af;
-      border: 1px dashed rgba(75, 85, 99, 0.8);
-      font-size: 0.8rem;
-      padding: 8px 12px;
-    }
-
-    .usage-info {
-      margin-top: 10px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      font-size: 0.8rem;
-      color: #9ca3af;
-    }
-
-    .usage-badge {
-      padding: 4px 10px;
-      border-radius: 999px;
-      font-size: 0.75rem;
-      border: 1px solid rgba(56, 189, 248, 0.9);
-      color: #e0f2fe;
-      background: rgba(8, 47, 73, 0.7);
-    }
-
-    .usage-badge.limit {
-      border-color: rgba(248, 113, 113, 0.9);
-      color: #fee2e2;
-      background: rgba(127, 29, 29, 0.7);
-    }
-
-    #message {
-      margin-top: 6px;
-      font-size: 0.8rem;
-      color: #f97316;
-      min-height: 1em;
-    }
-
-    .result-card {
-      margin-top: 14px;
-      padding: 12px;
-      border-radius: 14px;
-      background: radial-gradient(circle at top left, rgba(15, 118, 110, 0.4), rgba(15, 23, 42, 0.95));
-      border: 1px solid rgba(34, 197, 94, 0.4);
-    }
-
-    .result-title {
-      font-size: 0.9rem;
-      font-weight: 600;
-      color: #bbf7d0;
-      margin-bottom: 6px;
-    }
-
-    .result-main {
-      display: flex;
-      justify-content: space-between;
-      align-items: baseline;
-      margin-bottom: 4px;
-    }
-
-    .food-name {
-      font-size: 1rem;
-      font-weight: 600;
-    }
-
-    .calorie-text {
-      font-size: 1.1rem;
-      font-weight: 700;
-    }
-
-    .calorie-unit {
-      font-size: 0.8rem;
-      color: #9ca3af;
-      margin-left: 4px;
-    }
-
-    .result-note {
-      font-size: 0.75rem;
-      color: #d1fae5;
-      margin-top: 4px;
-    }
-
-    /* 🔔 구독 모달 */
-    #subscriptionModal {
-      position: fixed;
-      inset: 0;
-      background: rgba(15, 23, 42, 0.8);
-      display: none;
-      align-items: center;
-      justify-content: center;
-      z-index: 50;
-      backdrop-filter: blur(6px);
-    }
-
-    #subscriptionModal.active {
-      display: flex;
-    }
-
-    .modal-content {
-      width: 90%;
-      max-width: 360px;
-      background: radial-gradient(circle at top, #020617, #020617);
-      border-radius: 20px;
-      padding: 16px 16px 14px;
-      box-shadow:
-        0 18px 50px rgba(15, 23, 42, 0.95),
-        0 0 0 1px rgba(148, 163, 184, 0.4);
-      position: relative;
-    }
-
-    .modal-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 6px;
-    }
-
-    .modal-title {
-      font-size: 1rem;
-      font-weight: 700;
-      color: #e5e7eb;
-    }
-
-    #closeModalBtn {
-      background: transparent;
-      border-radius: 999px;
-      border: 1px solid rgba(75, 85, 99, 0.9);
-      width: 26px;
-      height: 26px;
-      font-size: 0.9rem;
-      color: #9ca3af;
-      cursor: pointer;
-    }
-
-    .modal-body {
-      margin-top: 6px;
-      font-size: 0.85rem;
-      color: #9ca3af;
-    }
-
-    .modal-highlight {
-      margin-top: 8px;
-      padding: 8px 10px;
-      border-radius: 12px;
-      background: rgba(15, 23, 42, 0.9);
-      border: 1px dashed rgba(56, 189, 248, 0.6);
-      font-size: 0.8rem;
-      color: #e0f2fe;
-    }
-
-    .modal-actions {
-      margin-top: 12px;
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-    }
-
-    .modal-subtext {
-      margin-top: 6px;
-      font-size: 0.75rem;
-      color: #6b7280;
-      text-align: center;
-    }
-
-    footer {
-      margin-top: 16px;
-      font-size: 0.7rem;
-      color: #6b7280;
-      text-align: center;
-    }
-
-    @media (max-width: 400px) {
-      header h1 {
-        font-size: 1.4rem;
-      }
-      .app-container {
-        padding: 12px;
-      }
-    }
-  </style>
+  <link rel="manifest" href="manifest.json" />
+  <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-  <header>
-    <h1>SmartCal AI</h1>
-    <p>📸 음식 촬영 → ⚡ 자동 인식 → 🔥 칼로리 계산</p>
-  </header>
+  <div class="app-shell">
+    <header class="app-header">
+      <div class="logo-wrap">
+        <div class="logo-dot"></div>
+        <span class="logo-text">SmartCal <span class="logo-ai">AI</span></span>
+      </div>
+      <div class="badge-area">
+        <span id="usageBadge" class="pill pill-free">FREE 24H</span>
+      </div>
+    </header>
 
-  <main class="app-container">
-    <div class="camera-wrapper">
-      <video id="video" autoplay playsinline></video>
-      <canvas id="canvas"></canvas>
+    <main class="app-main">
+      <!-- 상단 안내 영역 -->
+      <section class="hero">
+        <p id="usageText" class="usage-text">
+          무료 체험 남은 시간 계산 중...
+        </p>
+        <p id="message" class="helper-text">
+          카메라를 음식 쪽으로 향해 주세요. 📷
+        </p>
+      </section>
 
-      <!-- 🔮 촬영 전 안내 오버레이 -->
-      <div id="guideOverlay">
-        <div class="guide-chip">SMARTCAL NEON GUIDE</div>
-        <div class="guide-main-text">
-          찍고 싶은 음식이<br/>📸 <strong>화면 한가운데</strong> 오도록 맞춰주세요!
-          <div class="guide-sub-text">
-            촬영 버튼을 누르면 자동으로 <strong>음식 인식 + 칼로리</strong>가 계산됩니다.
+      <!-- 카메라 영역 -->
+      <section class="camera-card glass-card">
+        <div class="camera-frame">
+          <video id="video" autoplay playsinline></video>
+          <canvas id="canvas" class="hidden"></canvas>
+          <div id="guideOverlay" class="guide-overlay">
+            <div class="guide-box"></div>
+            <p class="guide-text">
+              음식이 가운데 초록 박스 안에 보이도록 맞춰주세요. 🥗
+            </p>
           </div>
         </div>
-      </div>
-    </div>
-
-    <div class="controls">
-      <button id="captureBtn" class="primary-btn">
-        🔍 촬영 & 칼로리 계산
-      </button>
-      <button id="switchCameraBtn" class="secondary-btn">
-        카메라 전환 🔄
-      </button>
-      <button id="resetGuideBtn" class="ghost-btn">
-        안내 다시 보기
-      </button>
-    </div>
-
-    <div class="usage-info">
-      <span id="usageText">무료 사용: 0 / 3회</span>
-      <span id="usageBadge" class="usage-badge">
-        FREE MODE
-      </span>
-    </div>
-
-    <div id="message"></div>
-
-    <section id="resultSection" class="result-card" style="display:none;">
-      <div class="result-title">분석 결과</div>
-      <div class="result-main">
-        <div class="food-name" id="foodName">-</div>
-        <div>
-          <span class="calorie-text" id="calorieValue">0</span>
-          <span class="calorie-unit">kcal</span>
+        <div class="camera-actions">
+          <button id="switchCameraBtn" class="btn secondary">카메라 전환 🔄</button>
+          <button id="captureBtn" class="btn primary">촬영하고 칼로리 분석하기 ⚡</button>
         </div>
-      </div>
-      <div class="result-note" id="resultNote">
-        촬영한 이미지를 기반으로 AI가 대략적인 칼로리를 추정합니다.
-      </div>
-    </section>
-  </main>
+      </section>
 
-  <footer>
-    SmartCal AI · 전세계 어디서나 간편한 칼로리 카메라 앱
-  </footer>
-
-  <!-- 🔔 구독 안내 모달 -->
-  <div id="subscriptionModal">
-    <div class="modal-content">
-      <div class="modal-header">
-        <div class="modal-title">무료 체험이 모두 사용되었습니다</div>
-        <button id="closeModalBtn">✕</button>
-      </div>
-      <div class="modal-body">
-        <p>지금까지 <strong>무료 3회 촬영</strong>이 모두 사용되었습니다.</p>
-        <div class="modal-highlight">
-          ✅ 구독하면:<br/>
-          • 촬영 횟수 <strong>무제한</strong><br/>
-          • 음식 히스토리 자동 저장<br/>
-          • 맞춤형 칼로리 리포트 제공
+      <!-- 분석 결과 영역 -->
+      <section id="resultSection" class="result-card glass-card hidden">
+        <h2 class="section-title">이번 한 끼 분석 결과</h2>
+        <div class="result-main">
+          <div class="result-food">
+            <span class="label">음식</span>
+            <span id="foodName" class="value">-</span>
+          </div>
+          <div class="result-kcal">
+            <span class="label">예상 칼로리</span>
+            <span id="calorieValue" class="kcal-value">0</span>
+            <span class="kcal-unit">kcal</span>
+          </div>
         </div>
-        <div class="modal-actions">
-          <button id="subscribeBtn" class="primary-btn">
-            🚀 구독하고 무제한 사용하기
+        <p id="resultNote" class="result-note">
+          촬영한 이미지를 기반으로 대략적인 칼로리를 추정합니다.
+        </p>
+      </section>
+
+      <!-- 오늘 섭취 기록 영역 -->
+      <section id="historySection" class="history-card glass-card hidden">
+        <div class="history-header">
+          <div>
+            <h2 id="historyDateLabel" class="section-title">오늘 섭취 기록</h2>
+            <p class="history-sub">하루 동안 찍은 음식들이 자동으로 기록됩니다.</p>
+          </div>
+          <button id="historyClearBtn" class="link-btn">기록 비우기</button>
+        </div>
+        <ul id="historyList" class="history-list"></ul>
+        <div class="history-footer">
+          <span class="label">오늘 총 섭취 칼로리</span>
+          <span id="historyTotal" class="kcal-total">0</span>
+          <span class="kcal-unit">kcal</span>
+        </div>
+      </section>
+
+      <!-- PWA 설치 & 아이콘 스타일 선택 -->
+      <section class="install-card glass-card">
+        <h2 class="section-title">📲 스마트폰에 설치해서 쓰기</h2>
+        <p class="install-text">
+          홈 화면에 추가하면 앱처럼 1초 만에 실행할 수 있어요.
+        </p>
+        <div class="icon-style-grid">
+          <button class="icon-style" data-icon="A">
+            <span class="icon-preview icon-a"></span>
+            <span class="icon-label">A. 블루 + AI 광택</span>
           </button>
-          <button id="laterBtn" class="secondary-btn">
-            나중에 할게요
+          <button class="icon-style" data-icon="B">
+            <span class="icon-preview icon-b"></span>
+            <span class="icon-label">B. 헬스/야채 느낌</span>
+          </button>
+          <button class="icon-style" data-icon="C">
+            <span class="icon-preview icon-c"></span>
+            <span class="icon-label">C. 귀엽고 친근 캐릭터</span>
+          </button>
+          <button class="icon-style" data-icon="D">
+            <span class="icon-preview icon-d"></span>
+            <span class="icon-label">D. 블랙 하이엔드</span>
           </button>
         </div>
-        <div class="modal-subtext">
-          * 현재 버전은 데모용입니다. 실제 결제 기능은 추후 연동됩니다.
+        <button id="installBtn" class="btn outline install-btn" style="display:none;">
+          📥 스마트폰에 SmartCal AI 설치하기
+        </button>
+      </section>
+    </main>
+
+    <!-- 구독 모달 -->
+    <div id="subscriptionModal" class="modal-backdrop">
+      <div class="modal">
+        <div class="modal-header">
+          <h2>SmartCal AI Premium</h2>
+          <p class="modal-subtitle">정확한 기록은 최고의 다이어트입니다.</p>
+        </div>
+        <div class="modal-body">
+          <p class="modal-info">
+            무료 24시간 체험이 끝났어요. <br />
+            계속 사용하시려면 구독을 선택해 주세요. 💚
+          </p>
+          <p id="ctaMessage" class="modal-cta">
+            지금 구독하면 더 정확한 칼로리 인식이 가능합니다!
+          </p>
+
+          <div class="plan-card">
+            <div class="plan-header">
+              <span class="plan-name">SmartCal AI PRO</span>
+              <span class="plan-price">월 4,900원</span>
+            </div>
+            <ul class="plan-list">
+              <li>무제한 카메라 칼로리 분석</li>
+              <li>한식/일식/중식/디저트 데이터 매일 0시 자동 업데이트</li>
+              <li>오늘 섭취 기록 자동 저장 &amp; 총 칼로리 집계</li>
+              <li>향후 모든 신규 기능 우선 제공</li>
+            </ul>
+          </div>
+
+          <div class="pay-section">
+            <p class="pay-label">결제 방법 선택</p>
+            <div class="pay-grid">
+              <button class="btn pay kakao" data-pay="kakao">카카오페이로 구독하기</button>
+              <button class="btn pay toss" data-pay="toss">토스로 구독하기</button>
+              <button class="btn pay card" data-pay="card">신용/체크 카드 결제</button>
+              <button class="btn pay paypal" data-pay="paypal">PayPal (Global)</button>
+            </div>
+            <p class="pay-note">
+              * 현재는 데모 모드입니다. 실제 결제 페이지는 곧 연결될 예정입니다.
+            </p>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button id="laterBtn" class="btn ghost">나중에 할게요</button>
+          <button id="closeModalBtn" class="btn flat">닫기</button>
         </div>
       </div>
     </div>
+
+    <footer class="app-footer">
+      <span>© SmartCal AI · All rights reserved.</span>
+    </footer>
   </div>
 
-  <!-- 앱 스크립트 -->
   <script src="app.js"></script>
 </body>
 </html>
