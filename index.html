@@ -9,23 +9,41 @@
 </head>
 <body>
   <div class="app-shell">
+    <!-- 상단 헤더 -->
     <header class="app-header">
       <div class="logo-wrap">
         <div class="logo-dot"></div>
-        <span class="logo-text">SmartCal <span class="logo-ai">AI</span></span>
+        <span class="logo-text">
+          SmartCal <span class="logo-ai">AI</span>
+        </span>
       </div>
       <div class="badge-area">
-        <span id="usageBadge" class="pill pill-free">FREE 24H</span>
+        <!-- 무료 / 만료 뱃지 -->
+        <span
+          id="usageBadge"
+          class="pill pill-free"
+          data-role="usageBadge"
+        >
+          FREE 24H
+        </span>
       </div>
     </header>
 
     <main class="app-main">
       <!-- 상단 안내 영역 -->
       <section class="hero">
-        <p id="usageText" class="usage-text">
+        <p
+          id="usageText"
+          class="usage-text"
+          data-role="usageText"
+        >
           무료 체험 남은 시간 계산 중...
         </p>
-        <p id="message" class="helper-text">
+        <p
+          id="message"
+          class="helper-text"
+          data-role="message"
+        >
           카메라를 음식 쪽으로 향해 주세요. 📷
         </p>
       </section>
@@ -35,51 +53,119 @@
         <div class="camera-frame">
           <video id="video" autoplay playsinline></video>
           <canvas id="canvas" class="hidden"></canvas>
-          <div id="guideOverlay" class="guide-overlay">
+
+          <!-- 촬영 안내 오버레이 -->
+          <div
+            id="guideOverlay"
+            class="guide-overlay"
+          >
             <div class="guide-box"></div>
             <p class="guide-text">
               음식이 가운데 초록 박스 안에 보이도록 맞춰주세요. 🥗
             </p>
           </div>
         </div>
+
         <div class="camera-actions">
-          <button id="switchCameraBtn" class="btn secondary">카메라 전환 🔄</button>
-          <button id="captureBtn" class="btn primary">촬영하고 칼로리 분석하기 ⚡</button>
+          <button
+            id="switchCameraBtn"
+            class="btn secondary"
+          >
+            카메라 전환 🔄
+          </button>
+          <button
+            id="captureBtn"
+            class="btn primary"
+          >
+            촬영하고 칼로리 분석하기 ⚡
+          </button>
         </div>
       </section>
 
       <!-- 분석 결과 영역 -->
-      <section id="resultSection" class="result-card glass-card hidden">
+      <section
+        id="resultSection"
+        class="result-card glass-card hidden"
+        data-role="resultSection"
+      >
         <h2 class="section-title">이번 한 끼 분석 결과</h2>
+
         <div class="result-main">
           <div class="result-food">
             <span class="label">음식</span>
-            <span id="foodName" class="value">-</span>
+            <span
+              id="foodName"
+              class="value"
+              data-role="foodName"
+            >
+              -
+            </span>
           </div>
           <div class="result-kcal">
             <span class="label">예상 칼로리</span>
-            <span id="calorieValue" class="kcal-value">0</span>
+            <span
+              id="calorieValue"
+              class="kcal-value"
+              data-role="calorieValue"
+            >
+              0
+            </span>
             <span class="kcal-unit">kcal</span>
           </div>
         </div>
-        <p id="resultNote" class="result-note">
+
+        <p
+          id="resultNote"
+          class="result-note"
+          data-role="resultNote"
+        >
           촬영한 이미지를 기반으로 대략적인 칼로리를 추정합니다.
         </p>
       </section>
 
       <!-- 오늘 섭취 기록 영역 -->
-      <section id="historySection" class="history-card glass-card hidden">
+      <section
+        id="historySection"
+        class="history-card glass-card hidden"
+        data-role="historySection"
+      >
         <div class="history-header">
           <div>
-            <h2 id="historyDateLabel" class="section-title">오늘 섭취 기록</h2>
-            <p class="history-sub">하루 동안 찍은 음식들이 자동으로 기록됩니다.</p>
+            <h2
+              id="historyDateLabel"
+              class="section-title"
+              data-role="historyDateLabel"
+            >
+              오늘 섭취 기록
+            </h2>
+            <p class="history-sub">
+              하루 동안 찍은 음식들이 자동으로 기록됩니다.
+            </p>
           </div>
-          <button id="historyClearBtn" class="link-btn">기록 비우기</button>
+          <button
+            id="historyClearBtn"
+            class="link-btn"
+            data-role="historyClearBtn"
+          >
+            기록 비우기
+          </button>
         </div>
-        <ul id="historyList" class="history-list"></ul>
+
+        <ul
+          id="historyList"
+          class="history-list"
+          data-role="historyList"
+        ></ul>
+
         <div class="history-footer">
           <span class="label">오늘 총 섭취 칼로리</span>
-          <span id="historyTotal" class="kcal-total">0</span>
+          <span
+            id="historyTotal"
+            class="kcal-total"
+            data-role="historyTotal"
+          >
+            0
+          </span>
           <span class="kcal-unit">kcal</span>
         </div>
       </section>
@@ -90,84 +176,222 @@
         <p class="install-text">
           홈 화면에 추가하면 앱처럼 1초 만에 실행할 수 있어요.
         </p>
+
+        <!-- 아이콘 스타일 선택 -->
         <div class="icon-style-grid">
-          <button class="icon-style" data-icon="A">
+          <button
+            class="icon-style"
+            data-icon="A"
+          >
             <span class="icon-preview icon-a"></span>
             <span class="icon-label">A. 블루 + AI 광택</span>
           </button>
-          <button class="icon-style" data-icon="B">
+          <button
+            class="icon-style"
+            data-icon="B"
+          >
             <span class="icon-preview icon-b"></span>
             <span class="icon-label">B. 헬스/야채 느낌</span>
           </button>
-          <button class="icon-style" data-icon="C">
+          <button
+            class="icon-style"
+            data-icon="C"
+          >
             <span class="icon-preview icon-c"></span>
             <span class="icon-label">C. 귀엽고 친근 캐릭터</span>
           </button>
-          <button class="icon-style" data-icon="D">
+          <button
+            class="icon-style"
+            data-icon="D"
+          >
             <span class="icon-preview icon-d"></span>
             <span class="icon-label">D. 블랙 하이엔드</span>
           </button>
         </div>
-        <button id="installBtn" class="btn outline install-btn" style="display:none;">
+
+        <!-- PWA 설치 버튼 -->
+        <button
+          id="installBtn"
+          class="btn outline install-btn"
+          style="display:none;"
+        >
           📥 스마트폰에 SmartCal AI 설치하기
         </button>
       </section>
     </main>
 
     <!-- 구독 모달 -->
-    <div id="subscriptionModal" class="modal-backdrop">
+    <div
+      id="subscriptionModal"
+      class="modal-backdrop"
+      data-role="subscriptionModal"
+    >
       <div class="modal">
         <div class="modal-header">
           <h2>SmartCal AI Premium</h2>
-          <p class="modal-subtitle">정확한 기록은 최고의 다이어트입니다.</p>
+          <p class="modal-subtitle">
+            정확한 기록은 최고의 다이어트입니다.
+          </p>
         </div>
+
         <div class="modal-body">
           <p class="modal-info">
             무료 24시간 체험이 끝났어요. <br />
             계속 사용하시려면 구독을 선택해 주세요. 💚
           </p>
-          <p id="ctaMessage" class="modal-cta">
+
+          <!-- 랜덤 CTA 문구 (app.js에서 자동 변경) -->
+          <p
+            id="ctaMessage"
+            class="modal-cta"
+          >
             지금 구독하면 더 정확한 칼로리 인식이 가능합니다!
           </p>
 
-          <div class="plan-card">
-            <div class="plan-header">
-              <span class="plan-name">SmartCal AI PRO</span>
-              <span class="plan-price">월 4,900원</span>
+          <!-- 요금제 카드 3종 -->
+          <div class="plans-wrap">
+
+            <!-- 기본 스타터 -->
+            <div class="plan-card">
+              <div class="plan-header">
+                <span class="plan-name">Starter</span>
+                <span class="plan-price">월 3,900원</span>
+              </div>
+              <ul class="plan-list">
+                <li>하루 10회 촬영 분석</li>
+                <li>한식·라면·김밥·치킨 기본 데이터</li>
+                <li>오늘 섭취 기록 자동 저장</li>
+              </ul>
             </div>
-            <ul class="plan-list">
-              <li>무제한 카메라 칼로리 분석</li>
-              <li>한식/일식/중식/디저트 데이터 매일 0시 자동 업데이트</li>
-              <li>오늘 섭취 기록 자동 저장 &amp; 총 칼로리 집계</li>
-              <li>향후 모든 신규 기능 우선 제공</li>
-            </ul>
+
+            <!-- 가장 인기 있는 PRO -->
+            <div class="plan-card plan-hot">
+              <div class="plan-header">
+                <span class="plan-name">PRO (추천)</span>
+                <span class="plan-price">월 4,900원</span>
+              </div>
+              <ul class="plan-list">
+                <li>무제한 카메라 칼로리 분석</li>
+                <li>한식 / 일식 / 중식 / 디저트 매일 0시 자동 업데이트</li>
+                <li>오늘 섭취 기록 + 총 섭취 칼로리 집계</li>
+                <li>향후 모든 신규 기능 우선 제공</li>
+              </ul>
+            </div>
+
+            <!-- 매니아/전문가용 -->
+            <div class="plan-card">
+              <div class="plan-header">
+                <span class="plan-name">Ultra</span>
+                <span class="plan-price">월 5,900원</span>
+              </div>
+              <ul class="plan-list">
+                <li>AI 음식 추천 / 목표 칼로리 코칭</li>
+                <li>주간·월간 리포트 PDF 자동 생성</li>
+                <li>향후 “스마트 체중·운동 연동” 기능 포함</li>
+              </ul>
+            </div>
+
           </div>
 
+          <!-- 결제 영역 -->
           <div class="pay-section">
             <p class="pay-label">결제 방법 선택</p>
             <div class="pay-grid">
-              <button class="btn pay kakao" data-pay="kakao">카카오페이로 구독하기</button>
-              <button class="btn pay toss" data-pay="toss">토스로 구독하기</button>
-              <button class="btn pay card" data-pay="card">신용/체크 카드 결제</button>
-              <button class="btn pay paypal" data-pay="paypal">PayPal (Global)</button>
+              <!-- data-pay-url에 “예시 결제 페이지” 주소 연결 -->
+              <button
+                class="btn pay kakao"
+                data-pay="kakao"
+                data-pay-url="https://pay.kakao.com/"
+              >
+                카카오페이로 구독하기
+              </button>
+
+              <button
+                class="btn pay toss"
+                data-pay="toss"
+                data-pay-url="https://toss.im/payments"
+              >
+                토스로 구독하기
+              </button>
+
+              <button
+                class="btn pay card"
+                data-pay="card"
+                data-pay-url="https://www.inicis.com/"
+              >
+                신용/체크 카드 결제
+              </button>
+
+              <button
+                class="btn pay paypal"
+                data-pay="paypal"
+                data-pay-url="https://www.paypal.com/payments"
+              >
+                PayPal (Global)
+              </button>
             </div>
+
+            <!-- ✅ 실제 사용 가능한 계좌이체 안내 박스 -->
+            <div
+              class="bank-transfer-box"
+              style="margin-top:12px; padding:12px 14px; border-radius:12px; background:#f7f9ff; border:1px solid #d0dcff; font-size:13px; line-height:1.5;"
+            >
+              <p style="margin:0 0 4px;"><strong>✅ 지금 바로 사용 가능한 실제 결제 방법</strong></p>
+              <p style="margin:0 0 4px;">
+                아래 <b>사업자 계좌</b>로 선택한 요금제 금액을 입금해 주세요.
+              </p>
+              <p style="margin:0 0 2px;"><b>은행</b> : 카카오뱅크</p>
+              <p style="margin:0 0 2px;"><b>계좌번호</b> : 3333-17-4744532</p>
+              <p style="margin:0 0 6px;"><b>예금주</b> : 애그리넥서스 월드 AgriNexus World</p>
+              <p style="margin:0 0 2px; font-size:12px; color:#555;">
+                사업자등록번호 : 382-14-02703
+              </p>
+              <p style="margin:0 0 8px; font-size:12px; color:#555;">
+                상호 : 애그리넥서스월드(AgriNexus World)
+              </p>
+              <p style="margin:0; font-size:11px; color:#666;">
+                입금 후 카카오톡 또는 이메일로 알려주시면, 확인 후 구독 상태를 활성화해 드립니다.
+                (현금영수증 / 지출증빙 발급 가능)
+              </p>
+            </div>
+
+            <!-- 사용자가 어떤 버튼 눌렀는지 표시 -->
+            <p id="paySelected" class="pay-selected">
+              아직 결제 수단을 선택하지 않았어요. 👀
+            </p>
+
             <p class="pay-note">
-              * 현재는 데모 모드입니다. 실제 결제 페이지는 곧 연결될 예정입니다.
+              * 상단 카카오페이 / 토스 / 카드 / PayPal 버튼은 현재 데모용 링크입니다.<br />
+              실제 결제는 위 <b>카카오뱅크 사업자 계좌로 계좌이체</b> 후 이용해 주세요.
             </p>
           </div>
+
         </div>
+
         <div class="modal-footer">
-          <button id="laterBtn" class="btn ghost">나중에 할게요</button>
-          <button id="closeModalBtn" class="btn flat">닫기</button>
+          <button
+            id="laterBtn"
+            class="btn ghost"
+          >
+            나중에 할게요
+          </button>
+          <button
+            id="closeModalBtn"
+            class="btn flat"
+          >
+            닫기
+          </button>
         </div>
       </div>
     </div>
 
+    <!-- 하단 푸터 -->
     <footer class="app-footer">
       <span>© SmartCal AI · All rights reserved.</span>
     </footer>
   </div>
 
+  <!-- 메인 스크립트 -->
   <script src="app.js"></script>
 </body>
 </html>
