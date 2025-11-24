@@ -245,7 +245,7 @@
             id="ctaMessage"
             class="modal-cta"
           >
-            지금 구독하면 더 정확한 칼로리 인식이 가능합니다!
+            1초 스캔으로 음식 인식, 24시간 365일 식단 관리를 도와드립니다.
           </p>
 
           <!-- 요금제 카드 3종 -->
@@ -331,40 +331,68 @@
               </button>
             </div>
 
-            <!-- ✅ 실제 사용 가능한 계좌이체 안내 박스 -->
-            <div
-              class="bank-transfer-box"
-              style="margin-top:12px; padding:12px 14px; border-radius:12px; background:#f7f9ff; border:1px solid #d0dcff; font-size:13px; line-height:1.5;"
-            >
-              <p style="margin:0 0 4px;"><strong>✅ 지금 바로 사용 가능한 실제 결제 방법</strong></p>
-              <p style="margin:0 0 4px;">
-                아래 <b>사업자 계좌</b>로 선택한 요금제 금액을 입금해 주세요.
-              </p>
-              <p style="margin:0 0 2px;"><b>은행</b> : 카카오뱅크</p>
-              <p style="margin:0 0 2px;"><b>계좌번호</b> : 3333-17-4744532</p>
-              <p style="margin:0 0 6px;"><b>예금주</b> : 애그리넥서스 월드 AgriNexus World</p>
-              <p style="margin:0 0 2px; font-size:12px; color:#555;">
-                사업자등록번호 : 382-14-02703
-              </p>
-              <p style="margin:0 0 8px; font-size:12px; color:#555;">
-                상호 : 애그리넥서스월드(AgriNexus World)
-              </p>
-              <p style="margin:0; font-size:11px; color:#666;">
-                입금 후 카카오톡 또는 이메일로 알려주시면, 확인 후 구독 상태를 활성화해 드립니다.
-                (현금영수증 / 지출증빙 발급 가능)
-              </p>
-            </div>
-
             <!-- 사용자가 어떤 버튼 눌렀는지 표시 -->
             <p id="paySelected" class="pay-selected">
               아직 결제 수단을 선택하지 않았어요. 👀
             </p>
 
             <p class="pay-note">
-              * 상단 카카오페이 / 토스 / 카드 / PayPal 버튼은 현재 데모용 링크입니다.<br />
-              실제 결제는 위 <b>카카오뱅크 사업자 계좌로 계좌이체</b> 후 이용해 주세요.
+              위 카카오페이 · 토스 · 카드 · PayPal 버튼은
+              <strong>정식 PG(결제 대행) 연동을 준비 중인 데모 버튼</strong>입니다.<br />
+              정식 오픈 후에는 여기서 바로 안전하게 결제하실 수 있어요. 🔒
             </p>
-          </div>
+
+            <!-- ✅ 실제 사용 가능한 사업자 계좌 결제 안내 (배경 어둡게 처리) -->
+            <div
+              class="real-pay-box"
+              style="
+                margin-top: 16px;
+                padding: 16px 18px;
+                border-radius: 18px;
+                background: rgba(0, 0, 0, 0.75);
+                color: #ffffff;
+                line-height: 1.5;
+                font-size: 0.9rem;
+              "
+            >
+              <p style="font-weight:700; margin-bottom:8px;">
+                ✅ 지금 바로 사용 가능한 <span style="color:#99ff99;">실제 결제 방법</span>
+              </p>
+              <p style="margin-bottom:10px;">
+                PG(카카오페이 / 토스 / 카드 / PayPal) 자동 결제 시스템을
+                <strong>순차적으로 연동 중</strong>입니다.<br />
+                그동안은 아래 <strong>사업자 계좌로 구독료를 입금</strong>해 주시면
+                결제 완료 후 바로 구독을 활성화해 드립니다.
+              </p>
+
+              <p style="margin-bottom:6px;">
+                은행 : 카카오뱅크<br />
+                계좌번호 : <strong>3333-17-4744532</strong><br />
+                예금주 : <strong>애그리넥서스 월드 AgriNexus World</strong>
+              </p>
+
+              <p style="margin-bottom:6px;">
+                사업자등록번호 : 382-14-02703<br />
+                상호 : 애그리넥서스월드(AgriNexus World)
+              </p>
+
+              <p style="margin-bottom:6px;">
+                입금 후 카카오톡 또는 이메일로 성함·입금액·입금 시간을
+                알려주시면, 확인 후 <strong>구독 상태를 활성화</strong>해 드립니다.
+              </p>
+
+              <p style="margin-bottom:0;">
+                💡 모든 계좌 입금에 대해 <strong>현금영수증 / 지출증빙</strong> 발급이
+                가능합니다. 안심하고 이용해 주세요.
+              </p>
+
+              <p style="margin-top:10px; font-size:0.85rem; opacity:0.9;">
+                ⚙️ 카카오페이 · 토스 · 카드 · PayPal 자동 결제도 준비 중이에요.<br />
+                업데이트가 완료되면 앱 내에서 가장 먼저 안내해 드리겠습니다.
+              </p>
+            </div>
+
+          </div> <!-- /pay-section -->
 
         </div>
 
