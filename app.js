@@ -5,6 +5,9 @@
    - Render YOLO Server 연결
    - PWA 설치 + 아이콘 스타일 선택
    ============================================================ */
+// PortOne(Iamport) 초기화
+const IMP = window.IMP;
+IMP.init("imp86203201");  // 여기에 본인 MID 사용
 
 // === 24시간 무료 체험 설정 ===
 // 처음 앱을 실행한 시점부터 24시간 동안 무료로 사용 가능
@@ -375,3 +378,44 @@ document.addEventListener("DOMContentLoaded", () => {
   showRandomCTA();
   setInterval(showRandomCTA, 6000); // 6초마다 문구 랜덤 변경
 });
+// ======================
+// 기존에 있던 코드들 ...
+// (예: 촬영, YOLO 요청 등)
+// ======================
+
+
+// ===============================================
+// 📌 여기 아래에 붙여 넣으세요!!!
+// ===============================================
+
+// 결제 성공 후 무제한 활성화 함수
+function activateUnlimitedOnThisDevice(planName, paidAmount) {
+  const subInfo = {
+    plan: planName,
+    amount: paidAmount,
+    activatedAt: new Date().toISOString(),
+  };
+  localStorage.setItem("smartcal_subscription", JSON.stringify(subInfo));
+
+  const usageBadge = document.getElementById("usageBadge");
+  const usageText = document.getElementById("usageText");
+
+  if (usageBadge) {
+    usageBadge.textContent = "무제한 이용중";
+    usageBadge.classList.remove("pill-free");
+    usageBadge.classList.add("pill-premium");
+  }
+
+  if (usageText) {
+    usageText.textContent = "이 기기에서는 SmartCal AI를 무제한으로 사용할 수 있어요. 🎉";
+  }
+
+  const modal = document.getElementById("subscriptionModal");
+  if (modal) modal.classList.remove("show");
+
+  alert("결제가 완료되었습니다! 🎉 이제 무제한으로 이용할 수 있어요.");
+}
+
+
+// ↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓ 결제 버튼 연결 코드는 이 아래 ↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓
+// ===========================
