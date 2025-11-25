@@ -6,10 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <link rel="manifest" href="manifest.json" />
   <link rel="stylesheet" href="styles.css" />
-  <!-- PortOne(Iamport) 결제 스크립트 -->
-  <script src="https://cdn.iamport.kr/v1/iamport.js"></script>
 </head>
-
 <body>
   <div class="app-shell">
     <!-- 상단 헤더 -->
@@ -21,7 +18,7 @@
         </span>
       </div>
       <div class="badge-area">
-        <!-- 무료 / 만료 뱃지 -->
+        <!-- 무료 / 만료 / 무제한 뱃지 -->
         <span
           id="usageBadge"
           class="pill pill-free"
@@ -248,14 +245,14 @@
             id="ctaMessage"
             class="modal-cta"
           >
-            1초 스캔으로 음식 인식, 24시간 365일 식단 관리를 도와드립니다.
+            지금 구독하면 더 정확한 칼로리 인식이 가능합니다!
           </p>
 
           <!-- 요금제 카드 3종 -->
           <div class="plans-wrap">
 
             <!-- 기본 스타터 -->
-            <div class="plan-card">
+            <div class="plan-card" data-plan="starter">
               <div class="plan-header">
                 <span class="plan-name">Starter</span>
                 <span class="plan-price">월 3,900원</span>
@@ -268,7 +265,7 @@
             </div>
 
             <!-- 가장 인기 있는 PRO -->
-            <div class="plan-card plan-hot">
+            <div class="plan-card plan-hot" data-plan="pro">
               <div class="plan-header">
                 <span class="plan-name">PRO (추천)</span>
                 <span class="plan-price">월 4,900원</span>
@@ -282,7 +279,7 @@
             </div>
 
             <!-- 매니아/전문가용 -->
-            <div class="plan-card">
+            <div class="plan-card" data-plan="ultra">
               <div class="plan-header">
                 <span class="plan-name">Ultra</span>
                 <span class="plan-price">월 5,900원</span>
@@ -299,12 +296,16 @@
           <!-- 결제 영역 -->
           <div class="pay-section">
             <p class="pay-label">결제 방법 선택</p>
+            <p class="pay-desc">
+              아래 간편결제 / 카드 결제는 실제 PG(포트원)와 연동되어 결제 완료 시
+              <strong>1분 이내 자동으로 “무제한 이용중”</strong>으로 전환됩니다.
+            </p>
+
             <div class="pay-grid">
-              <!-- data-pay-url에 “예시 결제 페이지” 주소 연결 -->
               <button
                 class="btn pay kakao"
                 data-pay="kakao"
-                data-pay-url="https://pay.kakao.com/"
+                data-plan-target="pro"
               >
                 카카오페이로 구독하기
               </button>
@@ -312,7 +313,7 @@
               <button
                 class="btn pay toss"
                 data-pay="toss"
-                data-pay-url="https://toss.im/payments"
+                data-plan-target="pro"
               >
                 토스로 구독하기
               </button>
@@ -320,7 +321,7 @@
               <button
                 class="btn pay card"
                 data-pay="card"
-                data-pay-url="https://www.inicis.com/"
+                data-plan-target="pro"
               >
                 신용/체크 카드 결제
               </button>
@@ -328,10 +329,25 @@
               <button
                 class="btn pay paypal"
                 data-pay="paypal"
-                data-pay-url="https://www.paypal.com/payments"
+                data-plan-target="pro"
               >
                 PayPal (Global)
               </button>
+            </div>
+
+            <!-- 사업자 계좌 이체 안내 -->
+            <div class="bank-section">
+              <p class="bank-label">선호하시면 사업자 계좌 이체도 가능합니다.</p>
+              <ul class="bank-list">
+                <li>은행명: 카카오뱅크</li>
+                <li>계좌번호: 3333-17-4744532</li>
+                <li>예금주: 애그리넥서스 월드 AgriNexus World</li>
+                <li>사업자등록번호: 382-14-02703</li>
+              </ul>
+              <p class="bank-note">
+                계좌 이체 결제는 현재 <strong>관리자 확인 후 수동 활성화</strong>됩니다.
+                (1영업일 이내 처리) 빠른 이용을 원하시면 위 간편결제/카드 결제를 이용해 주세요.
+              </p>
             </div>
 
             <!-- 사용자가 어떤 버튼 눌렀는지 표시 -->
@@ -340,62 +356,10 @@
             </p>
 
             <p class="pay-note">
-              위 카카오페이 · 토스 · 카드 · PayPal 버튼은
-              <strong>정식 PG(결제 대행) 연동을 준비 중인 데모 버튼</strong>입니다.<br />
-              정식 오픈 후에는 여기서 바로 안전하게 결제하실 수 있어요. 🔒
+              * 포트원(아임포트) + PG사 심사 완료 후 실제 결제가 진행됩니다.<br />
+              * 결제/환불 정책은 아래 사업자 정보와 이용약관을 참고해 주세요.
             </p>
-
-            <!-- ✅ 실제 사용 가능한 사업자 계좌 결제 안내 (배경 어둡게 처리) -->
-            <div
-              class="real-pay-box"
-              style="
-                margin-top: 16px;
-                padding: 16px 18px;
-                border-radius: 18px;
-                background: rgba(0, 0, 0, 0.75);
-                color: #ffffff;
-                line-height: 1.5;
-                font-size: 0.9rem;
-              "
-            >
-              <p style="font-weight:700; margin-bottom:8px;">
-                ✅ 지금 바로 사용 가능한 <span style="color:#99ff99;">실제 결제 방법</span>
-              </p>
-              <p style="margin-bottom:10px;">
-                PG(카카오페이 / 토스 / 카드 / PayPal) 자동 결제 시스템을
-                <strong>순차적으로 연동 중</strong>입니다.<br />
-                그동안은 아래 <strong>사업자 계좌로 구독료를 입금</strong>해 주시면
-                결제 완료 후 바로 구독을 활성화해 드립니다.
-              </p>
-
-              <p style="margin-bottom:6px;">
-                은행 : 카카오뱅크<br />
-                계좌번호 : <strong>3333-17-4744532</strong><br />
-                예금주 : <strong>애그리넥서스 월드 AgriNexus World</strong>
-              </p>
-
-              <p style="margin-bottom:6px;">
-                사업자등록번호 : 382-14-02703<br />
-                상호 : 애그리넥서스월드(AgriNexus World)
-              </p>
-
-              <p style="margin-bottom:6px;">
-                입금 후 카카오톡 또는 이메일로 성함·입금액·입금 시간을
-                알려주시면, 확인 후 <strong>구독 상태를 활성화</strong>해 드립니다.
-              </p>
-
-              <p style="margin-bottom:0;">
-                💡 모든 계좌 입금에 대해 <strong>현금영수증 / 지출증빙</strong> 발급이
-                가능합니다. 안심하고 이용해 주세요.
-              </p>
-
-              <p style="margin-top:10px; font-size:0.85rem; opacity:0.9;">
-                ⚙️ 카카오페이 · 토스 · 카드 · PayPal 자동 결제도 준비 중이에요.<br />
-                업데이트가 완료되면 앱 내에서 가장 먼저 안내해 드리겠습니다.
-              </p>
-            </div>
-
-          </div> <!-- /pay-section -->
+          </div>
 
         </div>
 
@@ -416,12 +380,19 @@
       </div>
     </div>
 
-    <!-- 하단 푸터 -->
+    <!-- 하단 푸터 (전자상거래 필수 사업자 정보) -->
     <footer class="app-footer">
       <span>© SmartCal AI · All rights reserved.</span>
+      <br />
+      <small>
+        상호: 애그리넥서스월드(AgriNexus World) · 사업자등록번호: 382-14-02703 ·
+        대표자: 정재윤 · 주소: (사업장 주소 입력) · 전화: (대표 연락처 입력)
+      </small>
     </footer>
   </div>
 
+  <!-- 포트원(아임포트) 결제 스크립트 -->
+  <script src="https://cdn.iamport.kr/js/iamport.payment-1.2.0.js"></script>
   <!-- 메인 스크립트 -->
   <script src="app.js"></script>
 </body>
