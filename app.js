@@ -2,8 +2,8 @@
 // 기본 설정 & 전역 상태
 // ===============================
 
-// 🔁 YOLO 서버 URL (나중에 실제 주소로 교체)
-const YOLO_SERVER_URL = 'https://YOUR-YOLO-SERVER/predict';
+// ✅ YOLO 서버 진짜 주소
+const YOLO_SERVER_URL = "https://smartcal-yolo-server.onrender.com/predict";
 
 // 무료 체험에서 허용하는 촬영 횟수
 const FREE_CAPTURE_LIMIT = 3;
