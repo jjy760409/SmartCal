@@ -1,530 +1,574 @@
-// ===============================
-// 기본 설정 & 전역 상태
-// ===============================
+// app.js
 
-// ✅ YOLO 서버 진짜 주소
-const YOLO_SERVER_URL = "https://smartcal-yolo-server.onrender.com/predict";
+"use strict";
 
+/**
+ * ===============================
+ *  기본 상수 & 저장 키
+ * ===============================
+ */
 
-// 무료 체험에서 허용하는 촬영 횟수
-const FREE_CAPTURE_LIMIT = 3;
+// 무료 일일 사용 제한 (3회)
+const FREE_DAILY_LIMIT = 3;
 
 // 로컬스토리지 키
 const STORAGE_KEYS = {
-  usageCount: 'smartcal_usage_count',
-  unlimited: 'smartcal_unlimited',
-  history: 'smartcal_history'
+  PLAN: "scal_plan",            // "free" | "unlimited"
+  USAGE_DATE: "scal_usage_date",
+  USAGE_COUNT: "scal_usage_count",
+  HISTORY: "scal_history"
 };
 
-// 카메라 상태
+// 칼로로 음성 스타일 (C: 귀엽고 든든한 친구)
+const CALORO_VOICE_PROFILE = {
+  id: "C",
+  name: "Caloro",
+  style: "귀엽고 든든한 친구",
+  locale: "ko-KR",
+  pitch: 1.05,
+  speakingRate: 1.02
+};
+
+// AI 서버 주소 (B 방식: 진짜 AI)
+// ★ 실제 YOLO/AI 서버 주소로 변경해서 사용 ★
+const SMARTCAL_API_URL = "https://YOUR_SMARTCAL_AI_SERVER_URL/api/predict"; 
+// 예: https://smartcal-yolo-server.onrender.com/predict
+
+// 전역 상태
 let currentStream = null;
-let currentFacingMode = 'environment'; // 기본: 후면 카메라
-
-// 사용 상태
-let usageCount = 0;
-let isUnlimited = false;
-
-// PWA 설치 프롬프트
+let currentFacingMode = "environment"; // "user" | "environment"
 let deferredInstallPrompt = null;
+let IMP_INSTANCE = null;
 
-// ===============================
-// DOM 요소 가져오기
-// ===============================
-const videoEl          = document.getElementById('video');
-const canvasEl         = document.getElementById('canvas');
-const guideOverlayEl   = document.getElementById('guideOverlay');
-const switchCameraBtn  = document.getElementById('switchCameraBtn');
-const captureBtn       = document.getElementById('captureBtn');
+/**
+ * ===============================
+ *  유틸 함수
+ * ===============================
+ */
 
-const usageBadgeEl     = document.getElementById('usageBadge');
-const usageTextEl      = document.getElementById('usageText');
-const messageEl        = document.getElementById('message');
+function getTodayKey() {
+  return new Date().toISOString().slice(0, 10); // "YYYY-MM-DD"
+}
 
-const resultSectionEl  = document.getElementById('resultSection');
-const foodNameEl       = document.getElementById('foodName');
-const calorieValueEl   = document.getElementById('calorieValue');
-const resultNoteEl     = document.getElementById('resultNote');
+function getUsageCount() {
+  const today = getTodayKey();
+  const savedDate = localStorage.getItem(STORAGE_KEYS.USAGE_DATE);
+  if (savedDate !== today) {
+    localStorage.setItem(STORAGE_KEYS.USAGE_DATE, today);
+    localStorage.setItem(STORAGE_KEYS.USAGE_COUNT, "0");
+    return 0;
+  }
+  return parseInt(localStorage.getItem(STORAGE_KEYS.USAGE_COUNT) || "0", 10);
+}
 
-const historySectionEl = document.getElementById('historySection');
-const historyDateLabel = document.getElementById('historyDateLabel');
-const historyListEl    = document.getElementById('historyList');
-const historyTotalEl   = document.getElementById('historyTotal');
-const historyClearBtn  = document.getElementById('historyClearBtn');
-
-const installBtn       = document.getElementById('installBtn');
-
-// 구독 모달 관련
-const subscriptionModalEl = document.getElementById('subscriptionModal');
-const ctaMessageEl        = document.getElementById('ctaMessage');
-const paySelectedEl       = document.getElementById('paySelected');
-const laterBtn            = document.getElementById('laterBtn');
-const closeModalBtn       = document.getElementById('closeModalBtn');
-
-// ===============================
-// 초기화
-// ===============================
-document.addEventListener('DOMContentLoaded', () => {
-  initTrialState();
-  initCamera();
-  initHistory();
-  initPWA();
-  initSubscriptionModal();
-  initPayments();
-});
-
-// ===============================
-// 체험 / 무제한 상태 관리
-// ===============================
-
-function initTrialState() {
-  // 무제한 여부
-  const unlimitedFlag = localStorage.getItem(STORAGE_KEYS.unlimited);
-  isUnlimited = unlimitedFlag === 'yes';
-
-  // 사용 횟수
-  const savedUsage = parseInt(localStorage.getItem(STORAGE_KEYS.usageCount) || '0', 10);
-  usageCount = isNaN(savedUsage) ? 0 : savedUsage;
-
-  if (isUnlimited) {
-    setUnlimitedMode();
+function incrementUsageCount() {
+  const today = getTodayKey();
+  const savedDate = localStorage.getItem(STORAGE_KEYS.USAGE_DATE);
+  if (savedDate !== today) {
+    localStorage.setItem(STORAGE_KEYS.USAGE_DATE, today);
+    localStorage.setItem(STORAGE_KEYS.USAGE_COUNT, "1");
+    localStorage.setItem(STORAGE_KEYS.USAGE_DATE, today);
+    return 1;
   } else {
-    updateFreeModeUI();
+    const current = getUsageCount() + 1;
+    localStorage.setItem(STORAGE_KEYS.USAGE_COUNT, String(current));
+    return current;
   }
 }
 
-function updateFreeModeUI() {
-  if (!usageBadgeEl || !usageTextEl) return;
-
-  usageBadgeEl.textContent = 'FREE 24H';
-  usageBadgeEl.classList.remove('pill-unlimited');
-  if (!usageBadgeEl.classList.contains('pill-free')) {
-    usageBadgeEl.classList.add('pill-free');
-  }
-
-  usageTextEl.textContent = `무료 체험 중 · 오늘 ${usageCount}/${FREE_CAPTURE_LIMIT}회 사용했습니다.`;
+function isUnlimited() {
+  return localStorage.getItem(STORAGE_KEYS.PLAN) === "unlimited";
 }
 
-// ✅ 결제 성공 후 무제한 모드로 전환하는 함수
-function setUnlimitedMode() {
-  // 1) 상태 저장 (새로고침해도 유지)
-  localStorage.setItem(STORAGE_KEYS.unlimited, 'yes');
-  localStorage.setItem(STORAGE_KEYS.usageCount, '0');
-
-  // 2) 화면 배지/문구 바꾸기
-  if (usageBadgeEl) {
-    usageBadgeEl.textContent = 'UNLIMITED';
-    usageBadgeEl.classList.remove('pill-free');
-    usageBadgeEl.classList.add('pill-unlimited');
-  }
-
-  if (usageTextEl) {
-    usageTextEl.textContent = '무제한 이용중입니다. 마음껏 촬영해 보세요! 🚀';
-  }
-
-  // 3) 내부 플래그
-  isUnlimited = true;
-  usageCount = 0;
-  window.smartcalIsUnlimited = true;
-  window.smartcalUsageCount = 0;
-}
-
-// ===============================
-// 카메라 관련
-// ===============================
-
-async function initCamera() {
-  try {
-    await startCamera(currentFacingMode);
-  } catch (err) {
-    console.error(err);
-    if (messageEl) {
-      messageEl.textContent = '카메라를 사용할 수 없어요. 브라우저 권한을 확인해 주세요. 🔒';
-    }
-  }
-
-  if (switchCameraBtn) {
-    switchCameraBtn.addEventListener('click', async () => {
-      currentFacingMode = currentFacingMode === 'environment' ? 'user' : 'environment';
-      await startCamera(currentFacingMode);
-    });
-  }
-
-  if (captureBtn) {
-    captureBtn.addEventListener('click', onCaptureClick);
-  }
-}
-
-async function startCamera(facingMode) {
-  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-    throw new Error('getUserMedia not supported');
-  }
-
-  // 기존 스트림 중지
-  if (currentStream) {
-    currentStream.getTracks().forEach(track => track.stop());
-  }
-
-  const constraints = {
-    video: { facingMode },
-    audio: false
-  };
-
-  const stream = await navigator.mediaDevices.getUserMedia(constraints);
-  currentStream = stream;
-  videoEl.srcObject = stream;
-
-  if (guideOverlayEl) {
-    guideOverlayEl.style.display = 'flex';
-  }
-}
-
-async function onCaptureClick() {
-  // 무료 모드에서 사용 횟수 초과 시 모달 열기
-  if (!isUnlimited && usageCount >= FREE_CAPTURE_LIMIT) {
-    openSubscriptionModal();
-    return;
-  }
-
-  try {
-    if (messageEl) {
-      messageEl.textContent = '이미지 분석 중입니다... 잠시만 기다려 주세요. ⏳';
-    }
-
-    const blob = await captureCurrentFrame();
-    const result = await sendToYolo(blob);
-
-    const foodName = result.food_name || '인식된 음식';
-    const calories = result.calories || 0;
-
-    showResult(foodName, calories);
-    saveHistoryItem(foodName, calories);
-
-    if (!isUnlimited) {
-      usageCount += 1;
-      localStorage.setItem(STORAGE_KEYS.usageCount, String(usageCount));
-      updateFreeModeUI();
-
-      if (usageCount >= FREE_CAPTURE_LIMIT) {
-        // 바로 다음 사용부터는 구독 유도
-        openSubscriptionModal();
-      }
-    }
-
-    if (messageEl) {
-      messageEl.textContent = '다음 음식도 촬영해 보세요. 📷';
-    }
-  } catch (err) {
-    console.error(err);
-    if (messageEl) {
-      messageEl.textContent = '분석 중 오류가 발생했어요. 다시 한 번 촬영해 주세요. 🙏';
-    }
-  }
-}
-
-function captureCurrentFrame() {
-  return new Promise((resolve, reject) => {
-    if (!videoEl || !canvasEl) {
-      reject(new Error('video/canvas 요소를 찾을 수 없음'));
-      return;
-    }
-
-    const width = videoEl.videoWidth;
-    const height = videoEl.videoHeight;
-
-    if (!width || !height) {
-      reject(new Error('비디오가 아직 준비되지 않음'));
-      return;
-    }
-
-    canvasEl.width = width;
-    canvasEl.height = height;
-
-    const ctx = canvasEl.getContext('2d');
-    ctx.drawImage(videoEl, 0, 0, width, height);
-
-    canvasEl.toBlob(blob => {
-      if (!blob) {
-        reject(new Error('이미지 캡처 실패'));
-      } else {
-        resolve(blob);
-      }
-    }, 'image/jpeg', 0.9);
-  });
-}
-
-async function sendToYolo(blob) {
-  const formData = new FormData();
-  formData.append('file', blob, 'capture.jpg');
-
-  const response = await fetch(YOLO_SERVER_URL, {
-    method: 'POST',
-    body: formData
-  });
-
-  if (!response.ok) {
-    throw new Error('YOLO 서버 응답 오류');
-  }
-
-  const data = await response.json();
-  return data;
-}
-
-// ===============================
-// 결과 표시 & 기록
-// ===============================
-
-function showResult(foodName, calories) {
-  if (foodNameEl) foodNameEl.textContent = foodName;
-  if (calorieValueEl) calorieValueEl.textContent = Math.round(calories);
-
-  if (resultSectionEl) {
-    resultSectionEl.classList.remove('hidden');
-  }
-}
-
-function initHistory() {
-  if (historyClearBtn) {
-    historyClearBtn.addEventListener('click', () => {
-      localStorage.removeItem(STORAGE_KEYS.history);
-      renderHistory();
-    });
-  }
-  renderHistory();
-}
-
-function saveHistoryItem(foodName, calories) {
-  const todayKey = getTodayKey();
-  const history = getHistory();
-
-  if (!history[todayKey]) {
-    history[todayKey] = [];
-  }
-
-  history[todayKey].push({
-    foodName,
-    calories,
-    time: new Date().toISOString()
-  });
-
-  localStorage.setItem(STORAGE_KEYS.history, JSON.stringify(history));
-  renderHistory();
+function setPlanUnlimited() {
+  localStorage.setItem(STORAGE_KEYS.PLAN, "unlimited");
 }
 
 function getHistory() {
   try {
-    const raw = localStorage.getItem(STORAGE_KEYS.history);
-    if (!raw) return {};
+    const raw = localStorage.getItem(STORAGE_KEYS.HISTORY);
+    if (!raw) return [];
     return JSON.parse(raw);
-  } catch (e) {
-    return {};
+  } catch {
+    return [];
   }
 }
 
-function getTodayKey() {
-  const d = new Date();
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${y}-${m}-${day}`;
+function saveHistory(list) {
+  localStorage.setItem(STORAGE_KEYS.HISTORY, JSON.stringify(list));
+}
+
+/**
+ * ===============================
+ *  슬로건 자동 변환
+ * ===============================
+ */
+
+function setDynamicSlogan() {
+  const userLang = navigator.language || navigator.userLanguage;
+  const sloganElement = document.getElementById("sloganText");
+  if (!sloganElement) return;
+
+  if (userLang && userLang.startsWith("ko")) {
+    // 한국 사용자 → 칼로로 문구
+    sloganElement.innerText = "칼로로와 함께 똑똑하게 먹고, 건강하게 살자! 🍽️💚";
+  } else {
+    // 글로벌 사용자 → 영어 슬로건
+    sloganElement.innerText = "Eat Smart. Live Better. 🌎✨";
+  }
+}
+
+/**
+ * ===============================
+ *  UI 업데이트 (뱃지/문구)
+ * ===============================
+ */
+
+function updateUsageUI() {
+  const badge = document.getElementById("usageBadge");
+  const usageText = document.getElementById("usageText");
+
+  if (!badge || !usageText) return;
+
+  if (isUnlimited()) {
+    badge.classList.remove("pill-free");
+    badge.classList.add("pill-premium");
+    badge.textContent = "무제한 이용중";
+
+    usageText.textContent =
+      "지금은 Caloro 무제한 구독 상태예요. 마음껏 촬영하고 기록해 보세요! 🚀";
+  } else {
+    const used = getUsageCount();
+    const remain = Math.max(FREE_DAILY_LIMIT - used, 0);
+    badge.classList.remove("pill-premium");
+    badge.classList.add("pill-free");
+    badge.textContent = `FREE ${FREE_DAILY_LIMIT}회`;
+
+    usageText.textContent = `오늘 무료로 ${FREE_DAILY_LIMIT}번까지 촬영할 수 있어요. (남은 횟수: ${remain}회)`;
+  }
+}
+
+/**
+ * ===============================
+ *  카메라 관련
+ * ===============================
+ */
+
+async function startCamera(facingMode = "environment") {
+  const video = document.getElementById("video");
+  if (!video) return;
+
+  // 기존 스트림 정리
+  if (currentStream) {
+    currentStream.getTracks().forEach((t) => t.stop());
+    currentStream = null;
+  }
+
+  try {
+    const constraints = {
+      audio: false,
+      video: {
+        facingMode,
+        width: { ideal: 1280 },
+        height: { ideal: 720 }
+      }
+    };
+
+    const stream = await navigator.mediaDevices.getUserMedia(constraints);
+    currentStream = stream;
+    video.srcObject = stream;
+  } catch (err) {
+    console.error("카메라 시작 오류:", err);
+    const message = document.getElementById("message");
+    if (message) {
+      message.textContent = "카메라에 접근할 수 없어요. 브라우저 권한을 확인해 주세요. 🔒";
+    }
+  }
+}
+
+function toggleCamera() {
+  currentFacingMode = currentFacingMode === "environment" ? "user" : "environment";
+  startCamera(currentFacingMode);
+}
+
+/**
+ * ===============================
+ *  캡처 & AI 분석
+ * ===============================
+ */
+
+async function captureAndAnalyze() {
+  const video = document.getElementById("video");
+  const canvas = document.getElementById("canvas");
+  const resultSection = document.getElementById("resultSection");
+  const message = document.getElementById("message");
+
+  if (!video || !canvas) return;
+
+  // 캔버스에 현재 프레임 그리기
+  const width = video.videoWidth;
+  const height = video.videoHeight;
+  if (!width || !height) {
+    if (message) {
+      message.textContent = "카메라가 아직 준비 중이에요. 잠시 후 다시 시도해 주세요.";
+    }
+    return;
+  }
+
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext("2d");
+  ctx.drawImage(video, 0, 0, width, height);
+
+  if (message) {
+    message.textContent = "칼로로가 지금 사진을 분석 중이에요... 🤖";
+  }
+
+  try {
+    // 캔버스 → Blob 변환
+    const blob = await new Promise((resolve) =>
+      canvas.toBlob(resolve, "image/jpeg", 0.9)
+    );
+
+    // 실제 AI 서버로 전송
+    const formData = new FormData();
+    formData.append("image", blob, "capture.jpg");
+
+    const response = await fetch(SMARTCAL_API_URL, {
+      method: "POST",
+      body: formData
+    });
+
+    if (!response.ok) {
+      throw new Error("AI 서버 응답 에러");
+    }
+
+    const data = await response.json();
+    // 서버에서 이런 형태로 응답한다고 가정:
+    // { food_name: "김밥", calories: 350, note: "1인분 기준" }
+
+    const foodName = data.food_name || "알 수 없는 음식";
+    const calories = data.calories || 0;
+    const note =
+      data.note || "AI가 이미지를 분석한 결과입니다. 추정값이므로 참고용으로 사용해 주세요.";
+
+    showResult(foodName, calories, note);
+    addHistoryItem(foodName, calories);
+  } catch (err) {
+    console.error("AI 분석 오류:", err);
+    showResult(
+      "분석 실패",
+      0,
+      "AI 서버와 연결이 원활하지 않습니다. 잠시 후 다시 시도해 주세요."
+    );
+  }
+
+  if (resultSection) {
+    resultSection.classList.remove("hidden");
+  }
+}
+
+function showResult(foodName, calories, note) {
+  const foodNameEl = document.getElementById("foodName");
+  const calorieValueEl = document.getElementById("calorieValue");
+  const resultNoteEl = document.getElementById("resultNote");
+
+  if (foodNameEl) foodNameEl.textContent = foodName;
+  if (calorieValueEl) calorieValueEl.textContent = calories;
+  if (resultNoteEl) resultNoteEl.textContent = note;
+}
+
+/**
+ * ===============================
+ *  섭취 기록 관리
+ * ===============================
+ */
+
+function addHistoryItem(foodName, calories) {
+  const history = getHistory();
+  const now = new Date();
+  history.push({
+    foodName,
+    calories,
+    time: now.toISOString()
+  });
+  saveHistory(history);
+  renderHistory();
 }
 
 function renderHistory() {
-  if (!historyListEl || !historyTotalEl || !historySectionEl) return;
+  const historySection = document.getElementById("historySection");
+  const listEl = document.getElementById("historyList");
+  const totalEl = document.getElementById("historyTotal");
+  const dateLabel = document.getElementById("historyDateLabel");
 
   const history = getHistory();
-  const todayKey = getTodayKey();
-  const todayList = history[todayKey] || [];
+  if (!listEl || !totalEl || !dateLabel) return;
 
-  historyListEl.innerHTML = '';
-
-  if (todayList.length === 0) {
-    historySectionEl.classList.add('hidden');
-    historyTotalEl.textContent = '0';
-    if (historyDateLabel) historyDateLabel.textContent = '오늘 섭취 기록';
+  if (history.length === 0) {
+    historySection && historySection.classList.add("hidden");
+    listEl.innerHTML = "";
+    totalEl.textContent = "0";
     return;
   }
 
-  historySectionEl.classList.remove('hidden');
-  if (historyDateLabel) historyDateLabel.textContent = `${todayKey} 섭취 기록`;
+  historySection && historySection.classList.remove("hidden");
 
+  const today = getTodayKey().replace(/-/g, ".");
+  dateLabel.textContent = `오늘 섭취 기록 (${today})`;
+
+  listEl.innerHTML = "";
   let total = 0;
-
-  todayList.forEach(item => {
+  history.forEach((item) => {
     total += Number(item.calories || 0);
-
-    const li = document.createElement('li');
-    li.className = 'history-item';
+    const li = document.createElement("li");
+    li.className = "history-item";
 
     const time = new Date(item.time);
-    const hh = String(time.getHours()).padStart(2, '0');
-    const mm = String(time.getMinutes()).padStart(2, '0');
+    const hh = String(time.getHours()).padStart(2, "0");
+    const mm = String(time.getMinutes()).padStart(2, "0");
 
     li.innerHTML = `
-      <div class="history-food">${item.foodName}</div>
-      <div class="history-meta">
-        <span>${hh}:${mm}</span>
-        <span>${Math.round(item.calories)} kcal</span>
+      <div class="history-main">
+        <span class="history-food">${item.foodName}</span>
+        <span class="history-kcal">${item.calories} kcal</span>
       </div>
+      <span class="history-time">${hh}:${mm}</span>
     `;
-
-    historyListEl.appendChild(li);
+    listEl.appendChild(li);
   });
 
-  historyTotalEl.textContent = String(Math.round(total));
+  totalEl.textContent = total;
 }
 
-// ===============================
-// PWA 설치
-// ===============================
-
-function initPWA() {
-  window.addEventListener('beforeinstallprompt', (e) => {
-    e.preventDefault();
-    deferredInstallPrompt = e;
-    if (installBtn) {
-      installBtn.style.display = 'block';
-      installBtn.addEventListener('click', onInstallClick);
-    }
-  });
-}
-
-async function onInstallClick() {
-  if (!deferredInstallPrompt) return;
-  deferredInstallPrompt.prompt();
-  const choiceResult = await deferredInstallPrompt.userChoice;
-  if (choiceResult.outcome === 'accepted') {
-    console.log('PWA 설치 완료');
-  }
-  deferredInstallPrompt = null;
-  if (installBtn) installBtn.style.display = 'none';
-}
-
-// ===============================
-// 구독 모달
-// ===============================
-
-function initSubscriptionModal() {
-  if (laterBtn) {
-    laterBtn.addEventListener('click', () => {
-      closeSubscriptionModal();
-    });
-  }
-  if (closeModalBtn) {
-    closeModalBtn.addEventListener('click', () => {
-      closeSubscriptionModal();
-    });
-  }
-
-  // 랜덤 CTA 문구
-  if (ctaMessageEl) {
-    const ctas = [
-      '지금 구독하면 목표 몸무게에 한 걸음 더 가까워집니다! 💪',
-      '하루 한 잔 카페라떼 값으로 건강을 기록해 보세요. ☕',
-      '눈치 보지 말고 마음껏 먹고, SmartCal에게 기록은 맡기세요. 📊'
-    ];
-    ctaMessageEl.textContent = ctas[Math.floor(Math.random() * ctas.length)];
-  }
-}
+/**
+ * ===============================
+ *  구독 모달
+ * ===============================
+ */
 
 function openSubscriptionModal() {
-  if (!subscriptionModalEl) return;
-  subscriptionModalEl.classList.add('show');
+  const modal = document.getElementById("subscriptionModal");
+  if (modal) {
+    modal.classList.remove("hidden");
+  }
 }
 
 function closeSubscriptionModal() {
-  if (!subscriptionModalEl) return;
-  subscriptionModalEl.classList.remove('show');
+  const modal = document.getElementById("subscriptionModal");
+  if (modal) {
+    modal.classList.add("hidden");
+  }
 }
 
-// ===============================
-// 포트원 결제 연동
-// ===============================
+/**
+ * ===============================
+ *  Iamport 결제 연동 (클라이언트)
+ * ===============================
+ *
+ * 실제 서비스에서는:
+ * 1) 결제 성공 → 서버로 imp_uid, merchant_uid 전달
+ * 2) 서버에서 REST API(REST API Key/Secret 사용)로 결제 검증
+ * 3) 검증 성공 시에만 무제한 활성화
+ */
 
-function initPayments() {
-  if (typeof IMP === 'undefined') {
-    console.warn('IMP(아임포트) 객체를 찾을 수 없습니다. 스크립트를 확인해 주세요.');
+function initIamport() {
+  if (!window.IMP) {
+    console.warn("IMP(Iamport) 객체를 찾을 수 없습니다.");
+    return;
+  }
+  IMP_INSTANCE = window.IMP;
+  // 포트원에서 발급받은 가맹점 식별코드(MID)
+  IMP_INSTANCE.init("imp86203201");
+}
+
+function handlePayButtonClick(method) {
+  const paySelected = document.getElementById("paySelected");
+  if (!IMP_INSTANCE) {
+    alert("결제 모듈 준비 중입니다. 잠시 후 다시 시도해 주세요.");
     return;
   }
 
-  // 발급받은 가맹점 식별코드
-  IMP.init('imp86203201');
+  let pg = "html5_inicis";   // 기본 PG
+  let pay_method = "card";   // 기본 카드 결제
 
-  const payButtons = document.querySelectorAll('.btn.pay');
-  payButtons.forEach(btn => {
-    btn.addEventListener('click', () => {
-      const method = btn.getAttribute('data-pay');
-      const planTarget = btn.getAttribute('data-plan-target') || 'pro';
-
-      if (paySelectedEl) {
-        paySelectedEl.textContent = `${btn.textContent.trim()} 선택됨 · 결제창을 여는 중입니다...`;
-      }
-
-      requestPayment(method, planTarget);
-    });
-  });
-}
-
-function requestPayment(method, plan) {
-  // 요금제별 금액
-  const planInfo = {
-    starter: { name: 'SmartCal Starter', amount: 3900 },
-    pro:     { name: 'SmartCal PRO',     amount: 4900 },
-    ultra:   { name: 'SmartCal Ultra',   amount: 5900 }
-  };
-
-  const info = planInfo[plan] || planInfo.pro;
-
-  // PG / pay_method 설정 (실제 계약 PG에 맞게 수정 필요)
-  let pg = 'html5_inicis';
-  let payMethod = 'card';
-
-  if (method === 'kakao') {
-    pg = 'kakaopay';
-    payMethod = 'card';
-  } else if (method === 'toss') {
-    pg = 'tosspay';
-    payMethod = 'card';
-  } else if (method === 'paypal') {
-    // 해외결제용 예시 (실제 PG 정책에 따라 수정)
-    pg = 'paypal';
-    payMethod = 'card';
+  if (method === "kakao") {
+    pg = "kakaopay";
+  } else if (method === "toss") {
+    pg = "tosspay";
+  } else if (method === "paypal") {
+    // 해외용 - 실제 PG 연동 시 정책에 맞게 변경 필요
+    pg = "paypal";
+    pay_method = "paypal";
   }
 
-  const merchantUid = 'smartcal_' + new Date().getTime();
+  if (paySelected) {
+    paySelected.textContent = "결제창을 여는 중입니다. 잠시만 기다려 주세요... ⏳";
+  }
 
-  IMP.request_pay(
+  const merchantUid = "smartcal_" + new Date().getTime();
+
+  IMP_INSTANCE.request_pay(
     {
       pg,
-      pay_method: payMethod,
+      pay_method,
       merchant_uid: merchantUid,
-      name: info.name,
-      amount: info.amount,
-      // 필요하면 아래 buyer 정보 채우기
-      buyer_email: '',
-      buyer_name: '',
-      buyer_tel: '',
-      buyer_addr: '',
-      buyer_postcode: ''
+      name: "SmartCal AI PRO 무제한 이용권",
+      amount: 1900, // 이벤트: 1,900원
+      // 필요하면 구매자 정보 추가 가능
+      // buyer_email: "",
+      // buyer_name: "",
+      // buyer_tel: "",
+      // buyer_addr: "",
+      // buyer_postcode: ""
     },
     function (rsp) {
       if (rsp.success) {
-        // TODO: 실제 서비스에서는 여기서 서버로 검증 요청(REST API) 후
-        // 검증까지 OK일 때만 setUnlimitedMode() 호출하는 것이 안전합니다.
-
-        setUnlimitedMode();
+        // ⚠️ 실제 서비스에서는 서버에 검증 요청 필요
+        setPlanUnlimited();
+        updateUsageUI();
         closeSubscriptionModal();
 
-        if (paySelectedEl) {
-          paySelectedEl.textContent = '결제가 정상적으로 완료되었습니다. 무제한 이용이 활성화되었어요! ✅';
+        if (paySelected) {
+          paySelected.textContent =
+            "결제가 완료되었어요. 지금부터 Caloro 무제한 기준으로 이용하실 수 있어요! 🎉";
         }
-        alert('결제가 완료되었습니다. 이제 무제한으로 SmartCal AI를 이용하실 수 있습니다!');
 
+        alert("결제가 정상적으로 완료되었습니다. 이제 무제한으로 이용 가능합니다!");
       } else {
-        if (paySelectedEl) {
-          paySelectedEl.textContent = '결제가 취소되었거나 실패했습니다. 다시 시도해 주세요. 🙏';
+        console.error("결제 실패:", rsp.error_msg);
+        alert("결제가 실패했습니다. 다시 시도해 주세요.\n\n사유: " + rsp.error_msg);
+        if (paySelected) {
+          paySelected.textContent = "결제를 다시 시도해 주세요. 🙏";
         }
-        alert('결제가 취소되었거나 실패했습니다.');
       }
     }
   );
 }
+
+/**
+ * ===============================
+ *  PWA 설치 & 아이콘 스타일
+ * ===============================
+ */
+
+function initPWAInstall() {
+  const installBtn = document.getElementById("installBtn");
+
+  window.addEventListener("beforeinstallprompt", (e) => {
+    e.preventDefault();
+    deferredInstallPrompt = e;
+    if (installBtn) {
+      installBtn.style.display = "block";
+    }
+  });
+
+  if (installBtn) {
+    installBtn.addEventListener("click", async () => {
+      if (!deferredInstallPrompt) return;
+      deferredInstallPrompt.prompt();
+      const choice = await deferredInstallPrompt.userChoice;
+      if (choice.outcome === "accepted") {
+        installBtn.textContent = "설치 완료! 홈 화면에서 열어보세요 ✅";
+      }
+      deferredInstallPrompt = null;
+    });
+  }
+
+  // 아이콘 스타일 선택
+  const iconButtons = document.querySelectorAll(".icon-style");
+  iconButtons.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const icon = btn.getAttribute("data-icon");
+      iconButtons.forEach((b) => b.classList.remove("selected"));
+      btn.classList.add("selected");
+      // 선택한 아이콘 스타일 저장 (필요 시 PWA 아이콘 교체에 활용)
+      localStorage.setItem("scal_icon_style", icon);
+    });
+  });
+
+  // 이전에 선택한 아이콘 스타일 복원
+  const savedIcon = localStorage.getItem("scal_icon_style");
+  if (savedIcon) {
+    const selectedBtn = document.querySelector(
+      `.icon-style[data-icon="${savedIcon}"]`
+    );
+    selectedBtn && selectedBtn.classList.add("selected");
+  }
+}
+
+/**
+ * ===============================
+ *  이벤트 바인딩 & 초기화
+ * ===============================
+ */
+
+function initEventListeners() {
+  const captureBtn = document.getElementById("captureBtn");
+  const switchCameraBtn = document.getElementById("switchCameraBtn");
+  const historyClearBtn = document.getElementById("historyClearBtn");
+  const laterBtn = document.getElementById("laterBtn");
+  const closeModalBtn = document.getElementById("closeModalBtn");
+
+  if (captureBtn) {
+    captureBtn.addEventListener("click", async () => {
+      // 무료/무제한 체크
+      if (!isUnlimited()) {
+        const used = getUsageCount();
+        if (used >= FREE_DAILY_LIMIT) {
+          openSubscriptionModal();
+          return;
+        }
+        incrementUsageCount();
+        updateUsageUI();
+      }
+      await captureAndAnalyze();
+    });
+  }
+
+  if (switchCameraBtn) {
+    switchCameraBtn.addEventListener("click", () => {
+      toggleCamera();
+    });
+  }
+
+  if (historyClearBtn) {
+    historyClearBtn.addEventListener("click", () => {
+      if (confirm("오늘 섭취 기록을 모두 삭제할까요?")) {
+        saveHistory([]);
+        renderHistory();
+      }
+    });
+  }
+
+  if (laterBtn) {
+    laterBtn.addEventListener("click", () => {
+      closeSubscriptionModal();
+    });
+  }
+  if (closeModalBtn) {
+    closeModalBtn.addEventListener("click", () => {
+      closeSubscriptionModal();
+    });
+  }
+
+  // 결제 버튼들
+  const payButtons = document.querySelectorAll(".btn.pay");
+  payButtons.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const method = btn.getAttribute("data-pay");
+      handlePayButtonClick(method);
+    });
+  });
+}
+
+// DOM 로드 완료 후 초기화
+document.addEventListener("DOMContentLoaded", () => {
+  setDynamicSlogan();
+  initIamport();
+  updateUsageUI();
+  renderHistory();
+  startCamera(currentFacingMode);
+  initPWAInstall();
+  initEventListeners();
+});
