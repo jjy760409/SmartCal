@@ -12,7 +12,7 @@ if (IMP) {
 // ===========================
 // 1. 전역 상수 & 상태
 // ===========================
-const YOLO_API_URL = https://undefectively-preinsinuative-tricia.ngrok-free.dev -> http://localhost:8000
+const YOLO_API_URL = 'https://undefectively-preinsinuative-tricia.ngrok-free.dev/predict';
 
 const SUBSCRIPTION_STORAGE_KEY = 'smartcal_subscription_v1';
 const USAGE_STORAGE_KEY = 'smartcal_daily_usage_v1';
