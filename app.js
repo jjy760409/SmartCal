@@ -1,7 +1,7 @@
 // ===========================
 // 0. PortOne(Iamport) 초기화
 // ===========================
-const IMP = window.IMP || null;
+
 if (IMP) {
   // 가맹점 식별코드(MID): imp86203201
   IMP.init('imp86203201');
